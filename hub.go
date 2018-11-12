@@ -1,7 +1,18 @@
 package melody
 
 import (
+	"encoding/json"
+	"log"
 	"sync"
+
+	"github.com/gomodule/redigo/redis"
+	"github.com/gorilla/websocket"
+)
+
+var (
+	gRedisConn = func() (redis.Conn, error) {
+		return redis.Dial("tcp", ":6379")
+	}
 )
 
 type hub struct {
@@ -12,9 +23,19 @@ type hub struct {
 	exit       chan *envelope
 	open       bool
 	rwmutex    *sync.RWMutex
+	redisConn  redis.Conn
+	pubSubConn *redis.PubSubConn
 }
 
 func newHub() *hub {
+	redisConn, err := redis.Dial("tcp", ":6379")
+	if err != nil {
+		panic(err)
+	}
+	//defer redisConn.Close()
+
+	//defer pubSubConn.Close()
+
 	return &hub{
 		sessions:   make(map[*Session]bool),
 		broadcast:  make(chan *envelope),
@@ -23,6 +44,8 @@ func newHub() *hub {
 		exit:       make(chan *envelope),
 		open:       true,
 		rwmutex:    &sync.RWMutex{},
+		redisConn:  redisConn,
+		pubSubConn: &redis.PubSubConn{Conn: redisConn},
 	}
 }
 
@@ -77,4 +100,28 @@ func (h *hub) len() int {
 	defer h.rwmutex.RUnlock()
 
 	return len(h.sessions)
+}
+
+func (h *hub) readRedisConn() {
+	for {
+		switch v := h.pubSubConn.Receive().(type) {
+		case redis.Message:
+			e := &envelope{}
+			json.Unmarshal(v.Data, e)
+			message := &envelope{T: websocket.TextMessage, Msg: []byte(e.Msg), filter: func(s *Session) bool {
+				for _, element := range s.RegMap {
+					if element == e.To {
+						return true
+					}
+				}
+				return false
+			}}
+			h.broadcast <- message
+		case redis.Subscription:
+			log.Printf("subscription message:[%s] count:[%d]\n", v.Channel, v.Count)
+		case error:
+			log.Println("error pub/sub on connection, delivery has stopped")
+			return
+		}
+	}
 }

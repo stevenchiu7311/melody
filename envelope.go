@@ -1,7 +1,8 @@
 package melody
 
 type envelope struct {
-	t      int
-	msg    []byte
+	T      int
+	Msg    []byte
 	filter filterFunc
+	To     interface{}
 }

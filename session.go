@@ -18,6 +18,7 @@ type Session struct {
 	melody  *Melody
 	open    bool
 	rwmutex *sync.RWMutex
+	RegMap  map[string]interface{}
 }
 
 func (s *Session) writeMessage(message *envelope) {
@@ -39,7 +40,7 @@ func (s *Session) writeRaw(message *envelope) error {
 	}
 
 	s.conn.SetWriteDeadline(time.Now().Add(s.melody.Config.WriteWait))
-	err := s.conn.WriteMessage(message.t, message.msg)
+	err := s.conn.WriteMessage(message.T, message.Msg)
 
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func (s *Session) close() {
 }
 
 func (s *Session) ping() {
-	s.writeRaw(&envelope{t: websocket.PingMessage, msg: []byte{}})
+	s.writeRaw(&envelope{T: websocket.PingMessage, Msg: []byte{}})
 }
 
 func (s *Session) writePump() {
@@ -88,16 +89,16 @@ loop:
 				break loop
 			}
 
-			if msg.t == websocket.CloseMessage {
+			if msg.T == websocket.CloseMessage {
 				break loop
 			}
 
-			if msg.t == websocket.TextMessage {
-				s.melody.messageSentHandler(s, msg.msg)
+			if msg.T == websocket.TextMessage {
+				s.melody.messageSentHandler(s, msg.Msg)
 			}
 
-			if msg.t == websocket.BinaryMessage {
-				s.melody.messageSentHandlerBinary(s, msg.msg)
+			if msg.T == websocket.BinaryMessage {
+				s.melody.messageSentHandlerBinary(s, msg.Msg)
 			}
 		case <-ticker.C:
 			s.ping()
@@ -145,7 +146,7 @@ func (s *Session) Write(msg []byte) error {
 		return errors.New("session is closed")
 	}
 
-	s.writeMessage(&envelope{t: websocket.TextMessage, msg: msg})
+	s.writeMessage(&envelope{T: websocket.TextMessage, Msg: msg})
 
 	return nil
 }
@@ -156,7 +157,7 @@ func (s *Session) WriteBinary(msg []byte) error {
 		return errors.New("session is closed")
 	}
 
-	s.writeMessage(&envelope{t: websocket.BinaryMessage, msg: msg})
+	s.writeMessage(&envelope{T: websocket.BinaryMessage, Msg: msg})
 
 	return nil
 }
@@ -167,7 +168,7 @@ func (s *Session) Close() error {
 		return errors.New("session is already closed")
 	}
 
-	s.writeMessage(&envelope{t: websocket.CloseMessage, msg: []byte{}})
+	s.writeMessage(&envelope{T: websocket.CloseMessage, Msg: []byte{}})
 
 	return nil
 }
@@ -179,7 +180,7 @@ func (s *Session) CloseWithMsg(msg []byte) error {
 		return errors.New("session is already closed")
 	}
 
-	s.writeMessage(&envelope{t: websocket.CloseMessage, msg: msg})
+	s.writeMessage(&envelope{T: websocket.CloseMessage, Msg: msg})
 
 	return nil
 }
@@ -216,4 +217,13 @@ func (s *Session) MustGet(key string) interface{} {
 // IsClosed returns the status of the connection.
 func (s *Session) IsClosed() bool {
 	return s.closed()
+}
+
+func (s *Session) Register(regMap map[string]interface{}) {
+	s.RegMap = regMap
+	for _, element := range regMap {
+		if err := s.melody.hub.pubSubConn.Subscribe(element); err != nil {
+			panic(err)
+		}
+	}
 }

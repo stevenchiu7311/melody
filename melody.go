@@ -1,7 +1,9 @@
 package melody
 
 import (
+	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"sync"
 
@@ -80,6 +82,7 @@ func New() *Melody {
 	hub := newHub()
 
 	go hub.run()
+	go hub.readRedisConn()
 
 	return &Melody{
 		Config:                   newConfig(),
@@ -167,7 +170,7 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 		return errors.New("melody instance is closed")
 	}
 
-	conn, err := m.Upgrader.Upgrade(w, r, w.Header())
+	conn, err := m.Upgrader.Upgrade(w, r, nil)
 
 	if err != nil {
 		return err
@@ -208,7 +211,7 @@ func (m *Melody) Broadcast(msg []byte) error {
 		return errors.New("melody instance is closed")
 	}
 
-	message := &envelope{t: websocket.TextMessage, msg: msg}
+	message := &envelope{T: websocket.TextMessage, Msg: msg}
 	m.hub.broadcast <- message
 
 	return nil
@@ -220,8 +223,29 @@ func (m *Melody) BroadcastFilter(msg []byte, fn func(*Session) bool) error {
 		return errors.New("melody instance is closed")
 	}
 
-	message := &envelope{t: websocket.TextMessage, msg: msg, filter: fn}
+	message := &envelope{T: websocket.TextMessage, Msg: msg, filter: fn}
 	m.hub.broadcast <- message
+
+	return nil
+}
+
+// BroadcastFilter broadcasts a text message to all sessions that fn returns true for.
+func (m *Melody) BroadcastRemote(msg []byte, channel interface{}) error {
+	if m.hub.closed() {
+		return errors.New("melody instance is closed")
+	}
+
+	message := &envelope{T: websocket.TextMessage, Msg: msg, To: channel}
+
+	if message.To != "" {
+		content, _ := json.Marshal(*message)
+
+		if c, err := gRedisConn(); err != nil {
+			log.Printf("error on redis conn. %s\n", err)
+		} else {
+			c.Do("PUBLISH", message.To, content)
+		}
+	}
 
 	return nil
 }
@@ -249,7 +273,7 @@ func (m *Melody) BroadcastBinary(msg []byte) error {
 		return errors.New("melody instance is closed")
 	}
 
-	message := &envelope{t: websocket.BinaryMessage, msg: msg}
+	message := &envelope{T: websocket.BinaryMessage, Msg: msg}
 	m.hub.broadcast <- message
 
 	return nil
@@ -261,7 +285,7 @@ func (m *Melody) BroadcastBinaryFilter(msg []byte, fn func(*Session) bool) error
 		return errors.New("melody instance is closed")
 	}
 
-	message := &envelope{t: websocket.BinaryMessage, msg: msg, filter: fn}
+	message := &envelope{T: websocket.BinaryMessage, Msg: msg, filter: fn}
 	m.hub.broadcast <- message
 
 	return nil
@@ -280,7 +304,7 @@ func (m *Melody) Close() error {
 		return errors.New("melody instance is already closed")
 	}
 
-	m.hub.exit <- &envelope{t: websocket.CloseMessage, msg: []byte{}}
+	m.hub.exit <- &envelope{T: websocket.CloseMessage, Msg: []byte{}}
 
 	return nil
 }
@@ -292,7 +316,7 @@ func (m *Melody) CloseWithMsg(msg []byte) error {
 		return errors.New("melody instance is already closed")
 	}
 
-	m.hub.exit <- &envelope{t: websocket.CloseMessage, msg: msg}
+	m.hub.exit <- &envelope{T: websocket.CloseMessage, Msg: msg}
 
 	return nil
 }

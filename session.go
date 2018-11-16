@@ -227,3 +227,12 @@ func (s *Session) Register(regMap map[string]interface{}) {
 		}
 	}
 }
+
+func (s *Session) Unregister(regMap map[string]interface{}) {
+	for _, element := range regMap {
+		if err := s.melody.hub.pubSubConn.Unsubscribe(element); err != nil {
+			panic(err)
+		}
+	}
+	s.RegMap = regMap
+}

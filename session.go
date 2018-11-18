@@ -222,17 +222,31 @@ func (s *Session) IsClosed() bool {
 func (s *Session) Register(regMap map[string]interface{}) {
 	s.RegMap = regMap
 	for _, element := range regMap {
-		if err := s.melody.hub.pubSubConn.Subscribe(element); err != nil {
-			panic(err)
+		v, ok := s.melody.hub.regRefMap[element.(string)]
+		if ok {
+			*v++
+		} else {
+			i := 1
+			s.melody.hub.regRefMap[element.(string)] = &i
+			if err := s.melody.hub.pubSubConn.Subscribe(element); err != nil {
+				panic(err)
+			}
 		}
 	}
 }
 
 func (s *Session) Unregister(regMap map[string]interface{}) {
 	for _, element := range regMap {
-		if err := s.melody.hub.pubSubConn.Unsubscribe(element); err != nil {
-			panic(err)
+		v, ok := s.melody.hub.regRefMap[element.(string)]
+		if ok {
+			*v--
+			if *v == 0 {
+				delete(s.melody.hub.regRefMap, element.(string))
+				if err := s.melody.hub.pubSubConn.Unsubscribe(element); err != nil {
+					panic(err)
+				}
+			}
 		}
 	}
-	s.RegMap = regMap
+	s.RegMap = nil
 }

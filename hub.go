@@ -25,6 +25,7 @@ type hub struct {
 	rwmutex    *sync.RWMutex
 	redisConn  redis.Conn
 	pubSubConn *redis.PubSubConn
+	regRefMap  map[string]*int
 }
 
 func newHub() *hub {
@@ -46,6 +47,7 @@ func newHub() *hub {
 		rwmutex:    &sync.RWMutex{},
 		redisConn:  redisConn,
 		pubSubConn: &redis.PubSubConn{Conn: redisConn},
+		regRefMap:  make(map[string]*int),
 	}
 }
 

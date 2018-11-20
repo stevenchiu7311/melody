@@ -31,6 +31,7 @@ type hub struct {
 
 func newHub() *hub {
 	redisURI := core.ConfString("REDIS_URI")
+	log.Printf("Connect to redis server:[%s]\n", redisURI)
 	redisConn, err := redis.Dial("tcp", redisURI)
 	if err != nil {
 		panic(err)

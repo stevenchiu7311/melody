@@ -12,7 +12,8 @@ import (
 
 var (
 	gRedisConn = func() (redis.Conn, error) {
-		return redis.Dial("tcp", ":6379")
+		redisURI := core.ConfString("REDIS_URI")
+		return redis.Dial("tcp", redisURI)
 	}
 )
 

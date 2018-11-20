@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	"cmcm.com/cmgs/app/core"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/websocket"
 )
@@ -29,7 +30,8 @@ type hub struct {
 }
 
 func newHub() *hub {
-	redisConn, err := redis.Dial("tcp", ":6379")
+	redisURI := core.ConfString("REDIS_URI")
+	redisConn, err := redis.Dial("tcp", redisURI)
 	if err != nil {
 		panic(err)
 	}

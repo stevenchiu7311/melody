@@ -69,6 +69,7 @@ type Melody struct {
 	disconnectHandler        handleSessionFunc
 	pongHandler              handleSessionFunc
 	hub                      *hub
+	KeepAlive                bool
 }
 
 // New creates a new melody instance with default Upgrader and Config.

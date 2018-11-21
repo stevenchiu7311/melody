@@ -101,20 +101,24 @@ loop:
 				s.melody.messageSentHandlerBinary(s, msg.Msg)
 			}
 		case <-ticker.C:
-			s.ping()
+			if s.melody.KeepAlive {
+				s.ping()
+			}
 		}
 	}
 }
 
 func (s *Session) readPump() {
-	s.conn.SetReadLimit(s.melody.Config.MaxMessageSize)
-	s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
-
-	s.conn.SetPongHandler(func(string) error {
+	if s.melody.KeepAlive {
+		s.conn.SetReadLimit(s.melody.Config.MaxMessageSize)
 		s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
-		s.melody.pongHandler(s)
-		return nil
-	})
+
+		s.conn.SetPongHandler(func(string) error {
+			s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
+			s.melody.pongHandler(s)
+			return nil
+		})
+	}
 
 	if s.melody.closeHandler != nil {
 		s.conn.SetCloseHandler(func(code int, text string) error {

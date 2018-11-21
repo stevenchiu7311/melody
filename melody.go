@@ -245,6 +245,7 @@ func (m *Melody) BroadcastRemote(msg []byte, channel interface{}) error {
 			log.Printf("error on redis conn. %s\n", err)
 		} else {
 			c.Do("PUBLISH", message.To, content)
+			defer c.Close()
 		}
 	}
 

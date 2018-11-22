@@ -70,6 +70,7 @@ type Melody struct {
 	pongHandler              handleSessionFunc
 	hub                      *hub
 	KeepAlive                bool
+	pubMutex                 sync.RWMutex
 }
 
 // New creates a new melody instance with default Upgrader and Config.
@@ -230,7 +231,7 @@ func (m *Melody) BroadcastFilter(msg []byte, fn func(*Session) bool) error {
 	return nil
 }
 
-// BroadcastFilter broadcasts a text message to all sessions that fn returns true for.
+// BroadcastRemote -
 func (m *Melody) BroadcastRemote(msg []byte, channel interface{}) error {
 	if m.hub.closed() {
 		return errors.New("melody instance is closed")
@@ -241,12 +242,19 @@ func (m *Melody) BroadcastRemote(msg []byte, channel interface{}) error {
 	if message.To != "" {
 		content, _ := json.Marshal(*message)
 
-		if c, err := gRedisConn(); err != nil {
-			log.Printf("error on redis conn. %s\n", err)
-		} else {
-			c.Do("PUBLISH", message.To, content)
-			defer c.Close()
+		m.pubMutex.Lock()
+		if m.hub.pubRedisConn == nil {
+			if c, err := gRedisConn(); err != nil {
+				log.Printf("error on redis conn. %s\n", err)
+			} else {
+				m.hub.pubRedisConn = c
+			}
 		}
+
+		if m.hub.pubRedisConn != nil {
+			m.hub.pubRedisConn.Do("PUBLISH", message.To, content)
+		}
+		m.pubMutex.Unlock()
 	}
 
 	return nil

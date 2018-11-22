@@ -18,16 +18,17 @@ var (
 )
 
 type hub struct {
-	sessions   map[*Session]bool
-	broadcast  chan *envelope
-	register   chan *Session
-	unregister chan *Session
-	exit       chan *envelope
-	open       bool
-	rwmutex    *sync.RWMutex
-	redisConn  redis.Conn
-	pubSubConn *redis.PubSubConn
-	regRefMap  map[string]*int
+	sessions     map[*Session]bool
+	broadcast    chan *envelope
+	register     chan *Session
+	unregister   chan *Session
+	exit         chan *envelope
+	open         bool
+	rwmutex      *sync.RWMutex
+	redisConn    redis.Conn
+	pubRedisConn redis.Conn
+	pubSubConn   *redis.PubSubConn
+	regRefMap    map[string]*int
 }
 
 func newHub() *hub {

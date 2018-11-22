@@ -127,7 +127,7 @@ func (h *hub) readRedisConn() {
 		case redis.Subscription:
 			log.Printf("subscription message:[%s] count:[%d]\n", v.Channel, v.Count)
 		case error:
-			log.Println("error pub/sub on connection, delivery has stopped")
+			log.Println("error pub/sub on connection, delivery has stopped, err[", v, "]")
 			return
 		}
 	}

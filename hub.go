@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"sync"
+	"time"
 
 	"cmcm.com/cmgs/app/core"
 	"github.com/gomodule/redigo/redis"
@@ -25,23 +26,46 @@ type hub struct {
 	exit         chan *envelope
 	open         bool
 	rwmutex      *sync.RWMutex
+	redisPool    *redis.Pool
 	redisConn    redis.Conn
 	pubRedisConn redis.Conn
 	pubSubConn   *redis.PubSubConn
 	regRefMap    map[string]*int
 }
 
-func newHub() *hub {
-	redisURI := core.ConfString("REDIS_URI")
-	log.Printf("Connect to redis server:[%s]\n", redisURI)
-	redisConn, err := redis.Dial("tcp", redisURI)
-	if err != nil {
-		panic(err)
+func newRedisPool() *redis.Pool {
+	statRedis := newStatsRedis()
+	return &redis.Pool{
+		MaxIdle:   statRedis.MaxIdle,
+		MaxActive: statRedis.MaxActive,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", core.ConfString("REDIS_URI"),
+				redis.DialConnectTimeout(time.Duration(statRedis.ConnectTimeout)),
+				redis.DialReadTimeout(time.Duration(statRedis.ReadTimeout)),
+				redis.DialWriteTimeout(time.Duration(statRedis.WriteTimeout)))
+			if err != nil {
+				log.Println(err)
+				return nil, err
+			}
+			return c, nil
+		},
+		// Use the TestOnBorrow function to check the health of an idle connection
+		// before the connection is returned to the application.
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			if time.Since(t) < time.Minute {
+				return nil
+			}
+			_, err := c.Do("PING")
+			return err
+		},
+		IdleTimeout: 300 * time.Second,
+		// If Wait is true and the pool is at the MaxActive limit,
+		// then Get() waits for a connection to be returned to the pool before returning
+		Wait: true,
 	}
-	//defer redisConn.Close()
-
-	//defer pubSubConn.Close()
-
+}
+func newHub() *hub {
+	redisPool := newRedisPool()
 	return &hub{
 		sessions:   make(map[*Session]bool),
 		broadcast:  make(chan *envelope),
@@ -50,8 +74,8 @@ func newHub() *hub {
 		exit:       make(chan *envelope),
 		open:       true,
 		rwmutex:    &sync.RWMutex{},
-		redisConn:  redisConn,
-		pubSubConn: &redis.PubSubConn{Conn: redisConn},
+		redisPool:  redisPool,
+		pubSubConn: &redis.PubSubConn{Conn: redisPool.Get()},
 		regRefMap:  make(map[string]*int),
 	}
 }

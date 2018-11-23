@@ -2,6 +2,9 @@ package melody
 
 import "time"
 
+// UseRedisPool - USE REDIS POOL
+var UseRedisPool = true
+
 // Config melody configuration struct.
 type Config struct {
 	WriteWait         time.Duration // Milliseconds until write times out.
@@ -18,5 +21,24 @@ func newConfig() *Config {
 		PingPeriod:        (60 * time.Second * 9) / 10,
 		MaxMessageSize:    512,
 		MessageBufferSize: 256,
+	}
+}
+
+// StatsRedis -
+type StatsRedis struct {
+	MaxIdle        int
+	MaxActive      int
+	ConnectTimeout time.Duration
+	ReadTimeout    time.Duration
+	WriteTimeout   time.Duration
+}
+
+func newStatsRedis() *StatsRedis {
+	return &StatsRedis{
+		MaxIdle:        20,
+		MaxActive:      20,
+		ConnectTimeout: 10 * time.Second,
+		ReadTimeout:    0,
+		WriteTimeout:   0,
 	}
 }

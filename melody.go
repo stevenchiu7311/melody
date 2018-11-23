@@ -242,19 +242,26 @@ func (m *Melody) BroadcastRemote(msg []byte, channel interface{}) error {
 	if message.To != "" {
 		content, _ := json.Marshal(*message)
 
-		m.pubMutex.Lock()
-		if m.hub.pubRedisConn == nil {
-			if c, err := gRedisConn(); err != nil {
-				log.Printf("error on redis conn. %s\n", err)
-			} else {
-				m.hub.pubRedisConn = c
+		if UseRedisPool {
+			c := m.hub.redisPool.Get()
+			if c != nil {
+				c.Do("PUBLISH", message.To, content)
 			}
-		}
+		} else {
+			m.pubMutex.Lock()
+			if m.hub.pubRedisConn == nil {
+				if c, err := gRedisConn(); err != nil {
+					log.Printf("error on redis conn. %s\n", err)
+				} else {
+					m.hub.pubRedisConn = c
+				}
+			}
 
-		if m.hub.pubRedisConn != nil {
-			m.hub.pubRedisConn.Do("PUBLISH", message.To, content)
+			if m.hub.pubRedisConn != nil {
+				m.hub.pubRedisConn.Do("PUBLISH", message.To, content)
+			}
+			m.pubMutex.Unlock()
 		}
-		m.pubMutex.Unlock()
 	}
 
 	return nil

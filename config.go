@@ -5,6 +5,9 @@ import "time"
 // UseRedisPool - USE REDIS POOL
 var UseRedisPool = true
 
+// DebugRedisPoolConn -
+var DebugRedisPoolConn = 0
+
 // Config melody configuration struct.
 type Config struct {
 	WriteWait         time.Duration // Milliseconds until write times out.

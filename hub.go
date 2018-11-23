@@ -35,9 +35,14 @@ type hub struct {
 
 func newRedisPool() *redis.Pool {
 	statRedis := newStatsRedis()
+	numRedisConn := statRedis.MaxActive
+	if DebugRedisPoolConn != 0 {
+		numRedisConn = DebugRedisPoolConn
+	}
+	log.Println("Configured max active redis conn:", numRedisConn)
 	return &redis.Pool{
 		MaxIdle:   statRedis.MaxIdle,
-		MaxActive: statRedis.MaxActive,
+		MaxActive: numRedisConn,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", core.ConfString("REDIS_URI"),
 				redis.DialConnectTimeout(time.Duration(statRedis.ConnectTimeout)),

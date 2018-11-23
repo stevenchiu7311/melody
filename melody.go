@@ -243,10 +243,13 @@ func (m *Melody) BroadcastRemote(msg []byte, channel interface{}) error {
 		content, _ := json.Marshal(*message)
 
 		if UseRedisPool {
+			m.pubMutex.Lock()
 			c := m.hub.redisPool.Get()
 			if c != nil {
 				c.Do("PUBLISH", message.To, content)
 			}
+			defer c.Close()
+			m.pubMutex.Unlock()
 		} else {
 			m.pubMutex.Lock()
 			if m.hub.pubRedisConn == nil {

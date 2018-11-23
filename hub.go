@@ -66,6 +66,19 @@ func newRedisPool() *redis.Pool {
 }
 func newHub() *hub {
 	redisPool := newRedisPool()
+	redisURI := core.ConfString("REDIS_URI")
+	log.Printf("Connect to redis server:[%s]\n", redisURI)
+	redisConn, err := redis.Dial("tcp", redisURI,
+		redis.DialConnectTimeout(time.Duration(10*time.Second)),
+		redis.DialReadTimeout(time.Duration(0)),
+		redis.DialWriteTimeout(time.Duration(0)))
+	if err != nil {
+		panic(err)
+	}
+	//defer redisConn.Close()
+
+	//defer pubSubConn.Close()
+
 	return &hub{
 		sessions:   make(map[*Session]bool),
 		broadcast:  make(chan *envelope),
@@ -75,7 +88,7 @@ func newHub() *hub {
 		open:       true,
 		rwmutex:    &sync.RWMutex{},
 		redisPool:  redisPool,
-		pubSubConn: &redis.PubSubConn{Conn: redisPool.Get()},
+		pubSubConn: &redis.PubSubConn{Conn: redisConn},
 		regRefMap:  make(map[string]*int),
 	}
 }

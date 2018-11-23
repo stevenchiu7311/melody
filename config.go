@@ -35,7 +35,7 @@ type StatsRedis struct {
 
 func newStatsRedis() *StatsRedis {
 	return &StatsRedis{
-		MaxIdle:        20,
+		MaxIdle:        5,
 		MaxActive:      20,
 		ConnectTimeout: 10 * time.Second,
 		ReadTimeout:    0,

@@ -16,6 +16,7 @@ var (
 		redisURI := core.ConfString("REDIS_URI")
 		return redis.Dial("tcp", redisURI)
 	}
+	ForkInHub = true
 )
 
 type hub struct {
@@ -113,17 +114,24 @@ loop:
 				h.rwmutex.Unlock()
 			}
 		case m := <-h.broadcast:
-			h.rwmutex.RLock()
-			for s := range h.sessions {
-				if m.filter != nil {
-					if m.filter(s) {
+			handler := func() {
+				h.rwmutex.RLock()
+				for s := range h.sessions {
+					if m.filter != nil {
+						if m.filter(s) {
+							s.writeMessage(m)
+						}
+					} else {
 						s.writeMessage(m)
 					}
-				} else {
-					s.writeMessage(m)
 				}
+				h.rwmutex.RUnlock()
 			}
-			h.rwmutex.RUnlock()
+			if ForkInHub {
+				go handler()
+			} else {
+				handler()
+			}
 		case m := <-h.exit:
 			h.rwmutex.Lock()
 			for s := range h.sessions {
@@ -155,17 +163,24 @@ func (h *hub) readRedisConn() {
 	for {
 		switch v := h.pubSubConn.Receive().(type) {
 		case redis.Message:
-			e := &envelope{}
-			json.Unmarshal(v.Data, e)
-			message := &envelope{T: websocket.TextMessage, Msg: []byte(e.Msg), filter: func(s *Session) bool {
-				for _, element := range s.RegMap {
-					if element == e.To {
-						return true
+			handler := func() {
+				e := &envelope{}
+				json.Unmarshal(v.Data, e)
+				message := &envelope{T: websocket.TextMessage, Msg: []byte(e.Msg), filter: func(s *Session) bool {
+					for _, element := range s.RegMap {
+						if element == e.To {
+							return true
+						}
 					}
-				}
-				return false
-			}}
-			h.broadcast <- message
+					return false
+				}}
+				h.broadcast <- message
+			}
+			if ForkInHub {
+				go handler()
+			} else {
+				handler()
+			}
 		case redis.Subscription:
 			log.Printf("subscription message:[%s] count:[%d]\n", v.Channel, v.Count)
 		case error:

@@ -39,7 +39,9 @@ func (s *Session) writeRaw(message *envelope) error {
 		return errors.New("tried to write to a closed session")
 	}
 
-	s.conn.SetWriteDeadline(time.Now().Add(s.melody.Config.WriteWait))
+	if s.melody.KeepAlive {
+		s.conn.SetWriteDeadline(time.Now().Add(s.melody.Config.WriteWait))
+	}
 	err := s.conn.WriteMessage(message.T, message.Msg)
 
 	if err != nil {

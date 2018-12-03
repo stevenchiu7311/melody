@@ -187,6 +187,7 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 		melody:  m,
 		open:    true,
 		rwmutex: &sync.RWMutex{},
+		RegMap:  make(map[string]interface{}),
 	}
 
 	m.hub.register <- session

@@ -248,8 +248,8 @@ func (s *Session) Register(regMap map[string]interface{}) {
 }
 
 func (s *Session) register(regMap map[string]interface{}) {
-	s.RegMap = regMap
-	for _, element := range regMap {
+	for key, element := range regMap {
+		s.RegMap[key] = element
 		v, ok := s.melody.hub.regRefMap[element.(string)]
 		if ok {
 			*v++
@@ -265,7 +265,8 @@ func (s *Session) register(regMap map[string]interface{}) {
 }
 
 func (s *Session) Unregister(regMap map[string]interface{}) {
-	for _, element := range regMap {
+	for key, element := range regMap {
+		delete(s.RegMap, key)
 		v, ok := s.melody.hub.regRefMap[element.(string)]
 		if ok {
 			*v--
@@ -277,5 +278,4 @@ func (s *Session) Unregister(regMap map[string]interface{}) {
 			}
 		}
 	}
-	s.RegMap = nil
 }

@@ -2,10 +2,13 @@ package melody
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
+	"cmcm.com/cmgs/app/core"
+	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/websocket"
 )
 
@@ -226,16 +229,36 @@ func (s *Session) IsClosed() bool {
 }
 
 func (s *Session) Register(regMap map[string]interface{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			redisURI := core.ConfString("REDIS_URI")
+			redisConn, err := gRedisConn(redisURI)
+			s.melody.hub.pubSubConn = &redis.PubSubConn{Conn: redisConn}
+			if err == nil {
+				log.Println("Re-connect redis")
+			} else {
+				panic(err)
+			}
+			s.register(regMap)
+			s.melody.hub.reconnect <- true
+		}
+	}()
+
+	s.register(regMap)
+}
+
+func (s *Session) register(regMap map[string]interface{}) {
 	s.RegMap = regMap
 	for _, element := range regMap {
 		v, ok := s.melody.hub.regRefMap[element.(string)]
 		if ok {
 			*v++
 		} else {
-			i := 1
-			s.melody.hub.regRefMap[element.(string)] = &i
 			if err := s.melody.hub.pubSubConn.Subscribe(element); err != nil {
 				panic(err)
+			} else {
+				i := 1
+				s.melody.hub.regRefMap[element.(string)] = &i
 			}
 		}
 	}

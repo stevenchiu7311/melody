@@ -12,9 +12,12 @@ import (
 )
 
 var (
-	gRedisConn = func() (redis.Conn, error) {
-		redisURI := core.ConfString("REDIS_URI")
-		return redis.Dial("tcp", redisURI)
+	gRedisConn = func(uri string) (redis.Conn, error) {
+		redisConn, err := redis.Dial("tcp", uri,
+			redis.DialConnectTimeout(time.Duration(10*time.Second)),
+			redis.DialReadTimeout(time.Duration(0)),
+			redis.DialWriteTimeout(time.Duration(0)))
+		return redisConn, err
 	}
 	ForkInHub = true
 )
@@ -23,8 +26,9 @@ type hub struct {
 	sessions     map[*Session]bool
 	broadcast    chan *envelope
 	register     chan *Session
-	unregister   chan *Session
 	exit         chan *envelope
+	unregister   chan *Session
+	reconnect    chan bool
 	open         bool
 	rwmutex      *sync.RWMutex
 	redisPool    *redis.Pool
@@ -74,10 +78,7 @@ func newHub() *hub {
 	redisPool := newRedisPool()
 	redisURI := core.ConfString("REDIS_URI")
 	log.Printf("Connect to redis server:[%s]\n", redisURI)
-	redisConn, err := redis.Dial("tcp", redisURI,
-		redis.DialConnectTimeout(time.Duration(10*time.Second)),
-		redis.DialReadTimeout(time.Duration(0)),
-		redis.DialWriteTimeout(time.Duration(0)))
+	redisConn, err := gRedisConn(redisURI)
 	if err != nil {
 		panic(err)
 	}
@@ -91,6 +92,7 @@ func newHub() *hub {
 		register:   make(chan *Session),
 		unregister: make(chan *Session),
 		exit:       make(chan *envelope),
+		reconnect:  make(chan bool, 1),
 		open:       true,
 		rwmutex:    &sync.RWMutex{},
 		redisPool:  redisPool,
@@ -185,7 +187,17 @@ func (h *hub) readRedisConn() {
 			log.Printf("subscription message:[%s] count:[%d]\n", v.Channel, v.Count)
 		case error:
 			log.Println("error pub/sub on connection, delivery has stopped, err[", v, "]")
-			return
+			reconnect := <-h.reconnect
+			log.Println("reconnect:", reconnect)
+			if reconnect {
+				for session := range h.sessions {
+					for _, element := range session.RegMap {
+						if err := h.pubSubConn.Subscribe(element); err != nil {
+							panic(err)
+						}
+					}
+				}
+			}
 		}
 	}
 }

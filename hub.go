@@ -190,11 +190,9 @@ func (h *hub) readRedisConn() {
 			reconnect := <-h.reconnect
 			log.Println("reconnect:", reconnect)
 			if reconnect {
-				for session := range h.sessions {
-					for _, element := range session.RegMap {
-						if err := h.pubSubConn.Subscribe(element); err != nil {
-							panic(err)
-						}
+				for key := range h.regRefMap {
+					if err := h.pubSubConn.Subscribe(key); err != nil {
+						panic(err)
 					}
 				}
 			}

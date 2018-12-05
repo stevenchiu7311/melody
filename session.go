@@ -14,14 +14,15 @@ import (
 
 // Session wrapper around websocket connections.
 type Session struct {
-	Request *http.Request
-	Keys    map[string]interface{}
-	conn    *websocket.Conn
-	output  chan *envelope
-	melody  *Melody
-	open    bool
-	rwmutex *sync.RWMutex
-	RegMap  map[string]interface{}
+	Request     *http.Request
+	Keys        map[string]interface{}
+	conn        *websocket.Conn
+	output      chan *envelope
+	melody      *Melody
+	open        bool
+	rwmutex     *sync.RWMutex
+	RegMap      map[string]interface{}
+	regMapMutex *sync.RWMutex
 }
 
 func (s *Session) writeMessage(message *envelope) {
@@ -240,7 +241,7 @@ func (s *Session) Register(regMap map[string]interface{}) {
 				panic(err)
 			}
 			s.register(regMap)
-			s.melody.hub.reconnect <- true
+			s.melody.hub.persistRecv <- true
 		}
 	}()
 
@@ -249,7 +250,11 @@ func (s *Session) Register(regMap map[string]interface{}) {
 
 func (s *Session) register(regMap map[string]interface{}) {
 	for key, element := range regMap {
+		s.regMapMutex.Lock()
 		s.RegMap[key] = element
+		s.regMapMutex.Unlock()
+
+		s.melody.hub.regMutex.Lock()
 		v, ok := s.melody.hub.regRefMap[element.(string)]
 		if ok {
 			*v++
@@ -261,12 +266,17 @@ func (s *Session) register(regMap map[string]interface{}) {
 				s.melody.hub.regRefMap[element.(string)] = &i
 			}
 		}
+		s.melody.hub.regMutex.Unlock()
 	}
 }
 
 func (s *Session) Unregister(regMap map[string]interface{}) {
 	for key, element := range regMap {
+		s.regMapMutex.Lock()
 		delete(s.RegMap, key)
+		s.regMapMutex.Unlock()
+
+		s.melody.hub.regMutex.Lock()
 		v, ok := s.melody.hub.regRefMap[element.(string)]
 		if ok {
 			*v--
@@ -277,5 +287,6 @@ func (s *Session) Unregister(regMap map[string]interface{}) {
 				}
 			}
 		}
+		s.melody.hub.regMutex.Unlock()
 	}
 }

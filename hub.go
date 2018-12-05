@@ -28,7 +28,7 @@ type hub struct {
 	register     chan *Session
 	exit         chan *envelope
 	unregister   chan *Session
-	reconnect    chan bool
+	persistRecv  chan bool
 	open         bool
 	rwmutex      *sync.RWMutex
 	redisPool    *redis.Pool
@@ -36,6 +36,7 @@ type hub struct {
 	pubRedisConn redis.Conn
 	pubSubConn   *redis.PubSubConn
 	regRefMap    map[string]*int
+	regMutex     *sync.Mutex
 }
 
 func newRedisPool() *redis.Pool {
@@ -87,17 +88,18 @@ func newHub() *hub {
 	//defer pubSubConn.Close()
 
 	return &hub{
-		sessions:   make(map[*Session]bool),
-		broadcast:  make(chan *envelope),
-		register:   make(chan *Session),
-		unregister: make(chan *Session),
-		exit:       make(chan *envelope),
-		reconnect:  make(chan bool, 1),
-		open:       true,
-		rwmutex:    &sync.RWMutex{},
-		redisPool:  redisPool,
-		pubSubConn: &redis.PubSubConn{Conn: redisConn},
-		regRefMap:  make(map[string]*int),
+		sessions:    make(map[*Session]bool),
+		broadcast:   make(chan *envelope),
+		register:    make(chan *Session),
+		unregister:  make(chan *Session),
+		exit:        make(chan *envelope),
+		persistRecv: make(chan bool, 1),
+		open:        true,
+		rwmutex:     &sync.RWMutex{},
+		redisPool:   redisPool,
+		pubSubConn:  &redis.PubSubConn{Conn: redisConn},
+		regRefMap:   make(map[string]*int),
+		regMutex:    &sync.Mutex{},
 	}
 }
 
@@ -143,6 +145,7 @@ loop:
 			}
 			h.open = false
 			h.rwmutex.Unlock()
+			h.persistRecv <- false
 			break loop
 		}
 	}
@@ -169,11 +172,14 @@ func (h *hub) readRedisConn() {
 				e := &envelope{}
 				json.Unmarshal(v.Data, e)
 				message := &envelope{T: websocket.TextMessage, Msg: []byte(e.Msg), filter: func(s *Session) bool {
+					s.regMapMutex.RLock()
 					for _, element := range s.RegMap {
 						if element == e.To {
+							s.regMapMutex.RUnlock()
 							return true
 						}
 					}
+					s.regMapMutex.RUnlock()
 					return false
 				}}
 				h.broadcast <- message
@@ -187,14 +193,15 @@ func (h *hub) readRedisConn() {
 			log.Printf("subscription message:[%s] count:[%d]\n", v.Channel, v.Count)
 		case error:
 			log.Println("error pub/sub on connection, delivery has stopped, err[", v, "]")
-			reconnect := <-h.reconnect
-			log.Println("reconnect:", reconnect)
-			if reconnect {
+			persistRecv := <-h.persistRecv
+			if persistRecv {
 				for key := range h.regRefMap {
 					if err := h.pubSubConn.Subscribe(key); err != nil {
 						panic(err)
 					}
 				}
+			} else {
+				return
 			}
 		}
 	}

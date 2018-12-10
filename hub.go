@@ -195,6 +195,16 @@ func (h *hub) readRedisConn() {
 			log.Println("error pub/sub on connection, delivery has stopped, err[", v, "]")
 			persistRecv := <-h.persistRecv
 			if persistRecv {
+				redisURI := core.ConfString("REDIS_URI")
+				redisConn, err := gRedisConn(redisURI)
+				h.pubSubConn = &redis.PubSubConn{Conn: redisConn}
+				h.redisPool = newRedisPool()
+				if err == nil {
+					log.Println("Re-connect redis")
+				} else {
+					panic(err)
+				}
+
 				for key := range h.regRefMap {
 					if err := h.pubSubConn.Subscribe(key); err != nil {
 						panic(err)

@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"cmcm.com/cmgs/app/core"
-	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/websocket"
 )
 
@@ -230,25 +228,6 @@ func (s *Session) IsClosed() bool {
 }
 
 func (s *Session) Register(regMap map[string]interface{}) {
-	defer func() {
-		if r := recover(); r != nil {
-			redisURI := core.ConfString("REDIS_URI")
-			redisConn, err := gRedisConn(redisURI)
-			s.melody.hub.pubSubConn = &redis.PubSubConn{Conn: redisConn}
-			if err == nil {
-				log.Println("Re-connect redis")
-			} else {
-				panic(err)
-			}
-			s.register(regMap)
-			s.melody.hub.persistRecv <- true
-		}
-	}()
-
-	s.register(regMap)
-}
-
-func (s *Session) register(regMap map[string]interface{}) {
 	for key, element := range regMap {
 		s.regMapMutex.Lock()
 		s.RegMap[key] = element
@@ -259,11 +238,13 @@ func (s *Session) register(regMap map[string]interface{}) {
 		if ok {
 			*v++
 		} else {
+			i := 1
+			s.melody.hub.regRefMap[element.(string)] = &i
 			if err := s.melody.hub.pubSubConn.Subscribe(element); err != nil {
-				panic(err)
-			} else {
-				i := 1
-				s.melody.hub.regRefMap[element.(string)] = &i
+				log.Println("Subscribe [", element, "] failed...\n", err)
+				s.melody.hub.regMutex.Unlock()
+				s.melody.hub.persistRecv <- true
+				return
 			}
 		}
 		s.melody.hub.regMutex.Unlock()
@@ -283,7 +264,10 @@ func (s *Session) Unregister(regMap map[string]interface{}) {
 			if *v == 0 {
 				delete(s.melody.hub.regRefMap, element.(string))
 				if err := s.melody.hub.pubSubConn.Unsubscribe(element); err != nil {
-					panic(err)
+					log.Println("Unsubscribe [", element, "] failed...\n", err)
+					s.melody.hub.regMutex.Unlock()
+					s.melody.hub.persistRecv <- true
+					return
 				}
 			}
 		}

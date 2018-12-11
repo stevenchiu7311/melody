@@ -23,20 +23,21 @@ var (
 )
 
 type hub struct {
-	sessions     map[*Session]bool
-	broadcast    chan *envelope
-	register     chan *Session
-	exit         chan *envelope
-	unregister   chan *Session
-	persistRecv  chan bool
-	open         bool
-	rwmutex      *sync.RWMutex
-	redisPool    *redis.Pool
-	redisConn    redis.Conn
-	pubRedisConn redis.Conn
-	pubSubConn   *redis.PubSubConn
-	regRefMap    map[string]*int
-	regMutex     *sync.Mutex
+	sessions       map[*Session]bool
+	broadcast      chan *envelope
+	register       chan *Session
+	exit           chan *envelope
+	unregister     chan *Session
+	persistRecv    chan bool
+	open           bool
+	rwmutex        *sync.RWMutex
+	redisPool      *redis.Pool
+	redisConn      redis.Conn
+	pubRedisConn   redis.Conn
+	pubSubConn     *redis.PubSubConn
+	regRefMap      map[string]*int
+	regMutex       *sync.Mutex
+	allocConnMutex *sync.Mutex
 }
 
 func newRedisPool() *redis.Pool {
@@ -205,11 +206,14 @@ func (h *hub) readRedisConn() {
 					panic(err)
 				}
 
+				h.regMutex.Lock()
 				for key := range h.regRefMap {
 					if err := h.pubSubConn.Subscribe(key); err != nil {
+						h.regMutex.Unlock()
 						panic(err)
 					}
 				}
+				h.regMutex.Unlock()
 			} else {
 				return
 			}

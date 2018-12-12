@@ -163,6 +163,7 @@ func (s *Session) readPump() {
 			s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
 		}
 	}
+}
 
 // Write writes message to session.
 func (s *Session) Write(msg []byte) error {

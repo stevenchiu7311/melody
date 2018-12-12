@@ -50,6 +50,16 @@ var validReceivedCloseCodes = map[int]bool{
 	CloseTLSHandshake:            false,
 }
 
+// Keep alive const
+const (
+	KeepAliveOff = iota
+	KeepAlivePing
+	KeepAlivePong
+)
+
+// KeepAliveMode - Keep alive mode type
+type KeepAliveMode int
+
 type handleMessageFunc func(*Session, []byte)
 type handleErrorFunc func(*Session, error)
 type handleCloseFunc func(*Session, int, string) error
@@ -68,9 +78,10 @@ type Melody struct {
 	closeHandler             handleCloseFunc
 	connectHandler           handleSessionFunc
 	disconnectHandler        handleSessionFunc
+	pingHandler              handleSessionFunc
 	pongHandler              handleSessionFunc
 	hub                      *hub
-	KeepAlive                bool
+	KeepAlive                KeepAliveMode
 	pubMutex                 sync.RWMutex
 }
 
@@ -98,6 +109,7 @@ func New() *Melody {
 		closeHandler:             nil,
 		connectHandler:           func(*Session) {},
 		disconnectHandler:        func(*Session) {},
+		pingHandler:              func(*Session) {},
 		pongHandler:              func(*Session) {},
 		hub:                      hub,
 	}
@@ -111,6 +123,11 @@ func (m *Melody) HandleConnect(fn func(*Session)) {
 // HandleDisconnect fires fn when a session disconnects.
 func (m *Melody) HandleDisconnect(fn func(*Session)) {
 	m.disconnectHandler = fn
+}
+
+// HandlePing fires fn when a ping is received from a session.
+func (m *Melody) HandlePing(fn func(*Session)) {
+	m.pingHandler = fn
 }
 
 // HandlePong fires fn when a pong is received from a session.

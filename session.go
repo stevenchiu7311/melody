@@ -41,7 +41,7 @@ func (s *Session) writeRaw(message *envelope) error {
 		return errors.New("tried to write to a closed session")
 	}
 
-	if s.melody.KeepAlive {
+	if s.melody.KeepAlive != KeepAliveOff {
 		s.conn.SetWriteDeadline(time.Now().Add(s.melody.Config.WriteWait))
 	}
 	err := s.conn.WriteMessage(message.T, message.Msg)
@@ -72,6 +72,10 @@ func (s *Session) close() {
 
 func (s *Session) ping() {
 	s.writeRaw(&envelope{T: websocket.PingMessage, Msg: []byte{}})
+}
+
+func (s *Session) pong() {
+	s.writeRaw(&envelope{T: websocket.PongMessage, Msg: []byte{}})
 }
 
 func (s *Session) writePump() {
@@ -105,7 +109,7 @@ loop:
 				s.melody.messageSentHandlerBinary(s, msg.Msg)
 			}
 		case <-ticker.C:
-			if s.melody.KeepAlive {
+			if s.melody.KeepAlive == KeepAlivePing {
 				s.ping()
 			}
 		}
@@ -113,15 +117,24 @@ loop:
 }
 
 func (s *Session) readPump() {
-	if s.melody.KeepAlive {
-		s.conn.SetReadLimit(s.melody.Config.MaxMessageSize)
+	s.conn.SetReadLimit(s.melody.Config.MaxMessageSize)
+	if s.melody.KeepAlive != KeepAliveOff {
 		s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
-
-		s.conn.SetPongHandler(func(string) error {
-			s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
-			s.melody.pongHandler(s)
-			return nil
-		})
+		if s.melody.KeepAlive == KeepAlivePong {
+			s.conn.SetPingHandler(func(string) error {
+				s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
+				s.melody.pingHandler(s)
+				s.pong()
+				return nil
+			})
+		}
+		if s.melody.KeepAlive == KeepAlivePing {
+			s.conn.SetPongHandler(func(string) error {
+				s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
+				s.melody.pongHandler(s)
+				return nil
+			})
+		}
 	}
 
 	if s.melody.closeHandler != nil {
@@ -145,8 +158,11 @@ func (s *Session) readPump() {
 		if t == websocket.BinaryMessage {
 			s.melody.messageHandlerBinary(s, message)
 		}
+
+		if s.melody.KeepAlive != KeepAliveOff {
+			s.conn.SetReadDeadline(time.Now().Add(s.melody.Config.PongWait))
+		}
 	}
-}
 
 // Write writes message to session.
 func (s *Session) Write(msg []byte) error {

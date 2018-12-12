@@ -19,7 +19,7 @@ type Config struct {
 
 func newConfig() *Config {
 	return &Config{
-		WriteWait:         10 * time.Second,
+		WriteWait:         60 * time.Second,
 		PongWait:          60 * time.Second,
 		PingPeriod:        (60 * time.Second * 9) / 10,
 		MaxMessageSize:    512,

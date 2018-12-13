@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"runtime"
 	"sync"
 
 	"cmcm.com/cmgs/app/core"
@@ -210,7 +211,7 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 	if EnableDebug {
 		m.debugInfo.UserCountMutex.Lock()
 		m.debugInfo.UserCount++
-		log.Print("Enter User count:[", m.debugInfo.UserCount, "]")
+		log.Print("Enter User count:[", m.debugInfo.UserCount, "]", " NumGoroutine:[", runtime.NumGoroutine(), "]")
 		m.debugInfo.UserCountMutex.Unlock()
 	}
 
@@ -245,7 +246,7 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 	if EnableDebug {
 		m.debugInfo.UserCountMutex.Lock()
 		m.debugInfo.UserCount--
-		log.Print("Leave User count:[", m.debugInfo.UserCount, "]")
+		log.Print("Leave User count:[", m.debugInfo.UserCount, "]", " NumGoroutine:[", runtime.NumGoroutine(), "]")
 		m.debugInfo.UserCountMutex.Unlock()
 	}
 

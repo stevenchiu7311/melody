@@ -216,6 +216,9 @@ func (h *hub) readRedisConn() {
 					}
 				}
 				h.regMutex.Unlock()
+				for range h.persistRecv {
+					log.Println("Clean persistRecv channel queue...")
+				}
 			} else {
 				return
 			}

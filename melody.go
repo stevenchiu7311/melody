@@ -244,7 +244,7 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 
 	if EnableDebug {
 		m.debugInfo.UserCountMutex.Lock()
-		m.debugInfo.UserCount++
+		m.debugInfo.UserCount--
 		log.Print("Leave User count:[", m.debugInfo.UserCount, "]")
 		m.debugInfo.UserCountMutex.Unlock()
 	}

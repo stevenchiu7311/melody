@@ -191,7 +191,9 @@ func (h *hub) readRedisConn() {
 				handler()
 			}
 		case redis.Subscription:
-			log.Printf("subscription message:[%s] count:[%d]\n", v.Channel, v.Count)
+			if EnableDebug {
+				log.Printf("subscription message:[%s] count:[%d]\n", v.Channel, v.Count)
+			}
 		case error:
 			log.Println("error pub/sub on connection, delivery has stopped, err[", v, "]")
 			persistRecv := <-h.persistRecv

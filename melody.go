@@ -83,7 +83,17 @@ type Melody struct {
 	hub                      *hub
 	KeepAlive                KeepAliveMode
 	pubMutex                 sync.RWMutex
+	debugInfo                DebugInfo
 }
+
+// DebugInfo -
+type DebugInfo struct {
+	UserCountMutex sync.Mutex
+	UserCount      int
+}
+
+// EnableDebug -
+var EnableDebug = false
 
 // New creates a new melody instance with default Upgrader and Config.
 func New() *Melody {
@@ -112,6 +122,7 @@ func New() *Melody {
 		pingHandler:              func(*Session) {},
 		pongHandler:              func(*Session) {},
 		hub:                      hub,
+		debugInfo:                DebugInfo{},
 	}
 }
 
@@ -196,6 +207,13 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 		return err
 	}
 
+	if EnableDebug {
+		m.debugInfo.UserCountMutex.Lock()
+		m.debugInfo.UserCount++
+		log.Print("Enter User count:[", m.debugInfo.UserCount, "]")
+		m.debugInfo.UserCountMutex.Unlock()
+	}
+
 	session := &Session{
 		Request:     r,
 		Keys:        keys,
@@ -223,6 +241,13 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 	session.close()
 
 	m.disconnectHandler(session)
+
+	if EnableDebug {
+		m.debugInfo.UserCountMutex.Lock()
+		m.debugInfo.UserCount++
+		log.Print("Leave User count:[", m.debugInfo.UserCount, "]")
+		m.debugInfo.UserCountMutex.Unlock()
+	}
 
 	return nil
 }

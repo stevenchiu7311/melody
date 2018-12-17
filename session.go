@@ -260,7 +260,11 @@ func (s *Session) Register(regMap map[string]interface{}) {
 			if err := s.melody.hub.pubSubConn.Subscribe(element); err != nil {
 				log.Println("Subscribe [", element, "] failed...\n", err)
 				s.melody.hub.regMutex.Unlock()
-				s.melody.hub.persistRecv <- true
+				select {
+				case s.melody.hub.persistRecv <- true:
+				default:
+					log.Println("Already being reconnected and drop persistRecv signal...")
+				}
 				return
 			}
 		}

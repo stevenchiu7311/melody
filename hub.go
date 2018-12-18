@@ -94,7 +94,7 @@ func newHub() *hub {
 		register:    make(chan *Session),
 		unregister:  make(chan *Session),
 		exit:        make(chan *envelope),
-		persistRecv: make(chan bool, 1),
+		persistRecv: make(chan bool),
 		open:        true,
 		rwmutex:     &sync.RWMutex{},
 		redisPool:   redisPool,

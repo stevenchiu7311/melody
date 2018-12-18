@@ -260,11 +260,7 @@ func (s *Session) Register(regMap map[string]interface{}) {
 			if err := s.melody.hub.pubSubConn.Subscribe(element); err != nil {
 				log.Println("Subscribe [", element, "] failed...\n", err)
 				s.melody.hub.regMutex.Unlock()
-				select {
-				case s.melody.hub.persistRecv <- true:
-				default:
-					log.Println("Already being reconnected and drop persistRecv signal...")
-				}
+				s.signalRetry()
 				return
 			}
 		}
@@ -287,11 +283,20 @@ func (s *Session) Unregister(regMap map[string]interface{}) {
 				if err := s.melody.hub.pubSubConn.Unsubscribe(element); err != nil {
 					log.Println("Unsubscribe [", element, "] failed...\n", err)
 					s.melody.hub.regMutex.Unlock()
-					s.melody.hub.persistRecv <- true
+					s.signalRetry()
 					return
 				}
 			}
 		}
 		s.melody.hub.regMutex.Unlock()
+	}
+}
+
+func (s *Session) signalRetry() {
+	select {
+	case s.melody.hub.persistRecv <- true:
+		log.Println("Send persistRecv signal...")
+	default:
+		log.Println("Already being reconnected and drop persistRecv signal...")
 	}
 }

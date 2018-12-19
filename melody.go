@@ -280,11 +280,11 @@ func (m *Melody) BroadcastFilter(msg []byte, fn func(*Session) bool) error {
 
 // BroadcastRemote -
 func (m *Melody) BroadcastRemote(msg []byte, channel interface{}, messageType int) error {
-	return m.BroadcastOtherRemote(nil, msg, channel, messageType)
+	return m.BroadcastOthersRemote(nil, msg, channel, messageType)
 }
 
-// BroadcastOtherRemote -
-func (m *Melody) BroadcastOtherRemote(s *Session, msg []byte, channel interface{}, messageType int) error {
+// BroadcastOthersRemote -
+func (m *Melody) BroadcastOthersRemote(s *Session, msg []byte, channel interface{}, messageType int) error {
 	if m.hub.closed() {
 		return errors.New("melody instance is closed")
 	}

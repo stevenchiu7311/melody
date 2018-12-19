@@ -5,10 +5,10 @@ import (
 	"log"
 	"sync"
 	"time"
+	"unsafe"
 
 	"cmcm.com/cmgs/app/core"
 	"github.com/gomodule/redigo/redis"
-	"github.com/gorilla/websocket"
 )
 
 var (
@@ -172,7 +172,10 @@ func (h *hub) readRedisConn() {
 			handler := func() {
 				e := &envelope{}
 				json.Unmarshal(v.Data, e)
-				message := &envelope{T: websocket.TextMessage, Msg: []byte(e.Msg), filter: func(s *Session) bool {
+				message := &envelope{T: e.T, Msg: []byte(e.Msg), filter: func(s *Session) bool {
+					if e.From != 0 && e.From == uintptr(unsafe.Pointer(s)) {
+						return false
+					}
 					s.regMapMutex.RLock()
 					for _, element := range s.RegMap {
 						if element == e.To {

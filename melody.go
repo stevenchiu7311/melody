@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"runtime"
 	"sync"
+	"unsafe"
 
 	"cmcm.com/cmgs/app/core"
 	"github.com/gorilla/websocket"
@@ -278,12 +279,16 @@ func (m *Melody) BroadcastFilter(msg []byte, fn func(*Session) bool) error {
 }
 
 // BroadcastRemote -
-func (m *Melody) BroadcastRemote(msg []byte, channel interface{}) error {
+func (m *Melody) BroadcastRemote(msg []byte, channel interface{}, messageType int) error {
+	return m.BroadcastOtherRemote(nil, msg, channel, messageType)
+}
+
+// BroadcastOtherRemote -
+func (m *Melody) BroadcastOtherRemote(s *Session, msg []byte, channel interface{}, messageType int) error {
 	if m.hub.closed() {
 		return errors.New("melody instance is closed")
 	}
-
-	message := &envelope{T: websocket.TextMessage, Msg: msg, To: channel}
+	message := &envelope{T: messageType, Msg: msg, To: channel, From: uintptr(unsafe.Pointer(s))}
 
 	if message.To != "" {
 		content, _ := json.Marshal(*message)

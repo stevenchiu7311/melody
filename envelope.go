@@ -5,4 +5,5 @@ type envelope struct {
 	Msg    []byte
 	filter filterFunc
 	To     interface{}
+	From   uintptr
 }

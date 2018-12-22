@@ -107,8 +107,10 @@ func New() *Melody {
 
 	hub := newHub()
 
-	go hub.run()
-	go hub.readRedisConn()
+	for i := 0; i < RedisRcvConn; i++ {
+		go hub.run(i)
+		go hub.readRedisConn(i)
+	}
 
 	return &Melody{
 		Config:                   newConfig(),
@@ -261,7 +263,7 @@ func (m *Melody) Broadcast(msg []byte) error {
 	}
 
 	message := &envelope{T: websocket.TextMessage, Msg: msg}
-	m.hub.broadcast <- message
+	m.hub.broadcast[0] <- message
 
 	return nil
 }
@@ -273,7 +275,7 @@ func (m *Melody) BroadcastFilter(msg []byte, fn func(*Session) bool) error {
 	}
 
 	message := &envelope{T: websocket.TextMessage, Msg: msg, filter: fn}
-	m.hub.broadcast <- message
+	m.hub.broadcast[0] <- message
 
 	return nil
 }
@@ -346,7 +348,7 @@ func (m *Melody) BroadcastBinary(msg []byte) error {
 	}
 
 	message := &envelope{T: websocket.BinaryMessage, Msg: msg}
-	m.hub.broadcast <- message
+	m.hub.broadcast[0] <- message
 
 	return nil
 }
@@ -358,7 +360,7 @@ func (m *Melody) BroadcastBinaryFilter(msg []byte, fn func(*Session) bool) error
 	}
 
 	message := &envelope{T: websocket.BinaryMessage, Msg: msg, filter: fn}
-	m.hub.broadcast <- message
+	m.hub.broadcast[0] <- message
 
 	return nil
 }

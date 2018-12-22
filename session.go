@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/gorilla/websocket"
 )
@@ -245,46 +246,48 @@ func (s *Session) IsClosed() bool {
 }
 
 func (s *Session) Register(regMap map[string]interface{}) {
+	retryConn := false
+	value := int64(uintptr(unsafe.Pointer(s)))
+	bucketIdx := indexFor(value, RedisRcvConn)
 	for key, element := range regMap {
 		s.regMapMutex.Lock()
 		s.RegMap[key] = element
 		s.regMapMutex.Unlock()
 
 		s.melody.hub.regMutex.Lock()
-		v, ok := s.melody.hub.regRefMap[element.(string)]
-		if ok {
-			*v++
-		} else {
-			i := 1
-			s.melody.hub.regRefMap[element.(string)] = &i
-			if err := s.melody.hub.pubSubConn.Subscribe(element); err != nil {
+		_, ok := s.melody.hub.routeMaps[bucketIdx][element.(string)]
+		if !ok {
+			s.melody.hub.routeMaps[bucketIdx][element.(string)] = make(map[*Session]*Session)
+			if err := s.melody.hub.pubSubConn[bucketIdx].Subscribe(element); err != nil {
 				log.Println("Subscribe [", element, "] failed...\n", err)
-				s.melody.hub.regMutex.Unlock()
-				s.signalRetry()
-				return
+				retryConn = true
 			}
 		}
+		s.melody.hub.routeMaps[bucketIdx][element.(string)][s] = s
 		s.melody.hub.regMutex.Unlock()
+	}
+
+	if retryConn {
+		s.signalRetry(bucketIdx)
 	}
 }
 
 func (s *Session) Unregister(regMap map[string]interface{}) {
+	value := int64(uintptr(unsafe.Pointer(s)))
+	bucketIdx := indexFor(value, RedisRcvConn)
 	for key, element := range regMap {
 		s.regMapMutex.Lock()
 		delete(s.RegMap, key)
 		s.regMapMutex.Unlock()
 
 		s.melody.hub.regMutex.Lock()
-		v, ok := s.melody.hub.regRefMap[element.(string)]
+		_, ok := s.melody.hub.routeMaps[bucketIdx][element.(string)]
 		if ok {
-			*v--
-			if *v == 0 {
-				delete(s.melody.hub.regRefMap, element.(string))
-				if err := s.melody.hub.pubSubConn.Unsubscribe(element); err != nil {
+			delete(s.melody.hub.routeMaps[bucketIdx][element.(string)], s)
+			if len(s.melody.hub.routeMaps[bucketIdx][element.(string)]) == 0 {
+				delete(s.melody.hub.routeMaps[bucketIdx], element.(string))
+				if err := s.melody.hub.pubSubConn[bucketIdx].Unsubscribe(element); err != nil {
 					log.Println("Unsubscribe [", element, "] failed...\n", err)
-					s.melody.hub.regMutex.Unlock()
-					s.signalRetry()
-					return
 				}
 			}
 		}
@@ -292,9 +295,9 @@ func (s *Session) Unregister(regMap map[string]interface{}) {
 	}
 }
 
-func (s *Session) signalRetry() {
+func (s *Session) signalRetry(index int) {
 	select {
-	case s.melody.hub.persistRecv <- true:
+	case s.melody.hub.persistRecv[index] <- true:
 		log.Println("Send persistRecv signal...")
 	default:
 		log.Println("Already being reconnected and drop persistRecv signal...")

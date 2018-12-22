@@ -8,6 +8,9 @@ var UseRedisPool = true
 // DebugRedisPoolConn -
 var DebugRedisPoolConn = 0
 
+// RedisRcvConn -
+var RedisRcvConn = 1
+
 // Config melody configuration struct.
 type Config struct {
 	WriteWait         time.Duration // Milliseconds until write times out.

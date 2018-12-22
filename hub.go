@@ -19,25 +19,27 @@ var (
 			redis.DialWriteTimeout(time.Duration(0)))
 		return redisConn, err
 	}
-	ForkInHub = true
+	forkInHub       = true
+	routeMapping    = true
+	bucketDebugDump = true
 )
 
 type hub struct {
 	sessions       map[*Session]bool
-	broadcast      chan *envelope
+	broadcast      []chan *envelope
 	register       chan *Session
 	exit           chan *envelope
 	unregister     chan *Session
-	persistRecv    chan bool
+	persistRecv    []chan bool
 	open           bool
 	rwmutex        *sync.RWMutex
 	redisPool      *redis.Pool
 	redisConn      redis.Conn
 	pubRedisConn   redis.Conn
-	pubSubConn     *redis.PubSubConn
-	regRefMap      map[string]*int
+	pubSubConn     []*redis.PubSubConn
 	regMutex       *sync.Mutex
 	allocConnMutex *sync.Mutex
+	routeMaps      []map[interface{}]map[*Session]*Session
 }
 
 func newRedisPool() *redis.Pool {
@@ -80,31 +82,45 @@ func newHub() *hub {
 	redisPool := newRedisPool()
 	redisURI := core.ConfString("REDIS_URI")
 	log.Printf("Connect to redis server:[%s]\n", redisURI)
-	redisConn, err := gRedisConn(redisURI)
-	if err != nil {
-		panic(err)
+	log.Println("Configured max recv redis conn:", RedisRcvConn)
+	routeMaps := make([]map[interface{}]map[*Session]*Session, RedisRcvConn)
+	pubSubConn := make([]*redis.PubSubConn, RedisRcvConn)
+	broadcast := make([]chan *envelope, RedisRcvConn)
+	persistRecv := make([]chan bool, RedisRcvConn)
+	regRefMaps := make([]map[string]*int, RedisRcvConn)
+	for i := 0; i < RedisRcvConn; i++ {
+		redisConn, err := gRedisConn(redisURI)
+		pubSubConn[i] = &redis.PubSubConn{Conn: redisConn}
+		if err != nil {
+			panic(err)
+		}
+		broadcast[i] = make(chan *envelope)
+		regRefMaps[i] = make(map[string]*int)
+		routeMaps[i] = make(map[interface{}]map[*Session]*Session)
+		persistRecv[i] = make(chan bool)
 	}
+
 	//defer redisConn.Close()
 
 	//defer pubSubConn.Close()
 
 	return &hub{
 		sessions:    make(map[*Session]bool),
-		broadcast:   make(chan *envelope),
+		broadcast:   broadcast,
 		register:    make(chan *Session),
 		unregister:  make(chan *Session),
 		exit:        make(chan *envelope),
-		persistRecv: make(chan bool),
+		persistRecv: persistRecv,
 		open:        true,
 		rwmutex:     &sync.RWMutex{},
 		redisPool:   redisPool,
-		pubSubConn:  &redis.PubSubConn{Conn: redisConn},
-		regRefMap:   make(map[string]*int),
+		pubSubConn:  pubSubConn,
 		regMutex:    &sync.Mutex{},
+		routeMaps:   routeMaps,
 	}
 }
 
-func (h *hub) run() {
+func (h *hub) run(index int) {
 loop:
 	for {
 		select {
@@ -113,26 +129,43 @@ loop:
 			h.sessions[s] = true
 			h.rwmutex.Unlock()
 		case s := <-h.unregister:
+			h.rwmutex.Lock()
 			if _, ok := h.sessions[s]; ok {
-				h.rwmutex.Lock()
 				delete(h.sessions, s)
-				h.rwmutex.Unlock()
 			}
-		case m := <-h.broadcast:
+			h.rwmutex.Unlock()
+		case m := <-h.broadcast[index]:
 			handler := func() {
 				h.rwmutex.RLock()
-				for s := range h.sessions {
-					if m.filter != nil {
-						if m.filter(s) {
+				if false {
+					log.Println(m)
+				}
+				if routeMapping {
+					h.regMutex.Lock()
+					for s := range h.routeMaps[index][m.To] {
+						if m.filter != nil {
+							if m.filter(s) {
+								s.writeMessage(m)
+							}
+						} else {
 							s.writeMessage(m)
 						}
-					} else {
-						s.writeMessage(m)
+					}
+					h.regMutex.Unlock()
+				} else {
+					for s := range h.sessions {
+						if m.filter != nil {
+							if m.filter(s) {
+								s.writeMessage(m)
+							}
+						} else {
+							s.writeMessage(m)
+						}
 					}
 				}
 				h.rwmutex.RUnlock()
 			}
-			if ForkInHub {
+			if forkInHub {
 				go handler()
 			} else {
 				handler()
@@ -146,7 +179,9 @@ loop:
 			}
 			h.open = false
 			h.rwmutex.Unlock()
-			h.persistRecv <- false
+			for i := 0; i < RedisRcvConn; i++ {
+				h.persistRecv[i] <- false
+			}
 			break loop
 		}
 	}
@@ -165,9 +200,23 @@ func (h *hub) len() int {
 	return len(h.sessions)
 }
 
-func (h *hub) readRedisConn() {
+func (h *hub) readRedisConn(index int) {
+	if bucketDebugDump {
+		go func() {
+			for {
+				h.regMutex.Lock()
+				if len(h.routeMaps[index]) > 0 {
+					log.Println("-------------------------------------")
+					log.Printf("h.routeMaps[%d]:%d", index, len(h.routeMaps[index]))
+				}
+				h.regMutex.Unlock()
+				time.Sleep(5 * time.Second)
+			}
+		}()
+	}
+
 	for {
-		switch v := h.pubSubConn.Receive().(type) {
+		switch v := h.pubSubConn[index].Receive().(type) {
 		case redis.Message:
 			handler := func() {
 				e := &envelope{}
@@ -176,6 +225,10 @@ func (h *hub) readRedisConn() {
 					if e.From != 0 && e.From == uintptr(unsafe.Pointer(s)) {
 						return false
 					}
+					if routeMapping {
+						return true
+					}
+
 					s.regMapMutex.RLock()
 					for _, element := range s.RegMap {
 						if element == e.To {
@@ -185,26 +238,26 @@ func (h *hub) readRedisConn() {
 					}
 					s.regMapMutex.RUnlock()
 					return false
-				}}
-				h.broadcast <- message
+				}, To: e.To}
+
+				h.broadcast[index] <- message
 			}
-			if ForkInHub {
+			if forkInHub {
 				go handler()
 			} else {
 				handler()
 			}
 		case redis.Subscription:
 			if EnableDebug {
-				log.Printf("subscription message:[%s] count:[%d]\n", v.Channel, v.Count)
+				log.Printf("subscription message:[%s] count:[%d] recvThread[%d]\n", v.Channel, v.Count, index)
 			}
 		case error:
 			log.Println("error pub/sub on connection, delivery has stopped, err[", v, "]")
-			persistRecv := <-h.persistRecv
+			persistRecv := <-h.persistRecv[index]
 			if persistRecv {
 				redisURI := core.ConfString("REDIS_URI")
 				redisConn, err := gRedisConn(redisURI)
-				h.pubSubConn = &redis.PubSubConn{Conn: redisConn}
-				h.redisPool = newRedisPool()
+				h.pubSubConn[index] = &redis.PubSubConn{Conn: redisConn}
 				if err == nil {
 					log.Println("Re-connect redis")
 				} else {
@@ -212,8 +265,8 @@ func (h *hub) readRedisConn() {
 				}
 
 				h.regMutex.Lock()
-				for key := range h.regRefMap {
-					if err := h.pubSubConn.Subscribe(key); err != nil {
+				for key := range h.routeMaps[index] {
+					if err := h.pubSubConn[index].Subscribe(key); err != nil {
 						h.regMutex.Unlock()
 						panic(err)
 					}

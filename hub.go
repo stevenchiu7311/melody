@@ -21,7 +21,7 @@ var (
 	}
 	forkInHub       = true
 	routeMapping    = true
-	bucketDebugDump = true
+	bucketDebugDump = false
 )
 
 type hub struct {

@@ -9,7 +9,7 @@ var UseRedisPool = true
 var DebugRedisPoolConn = 0
 
 // RedisRcvConn -
-var RedisRcvConn = 1
+var RedisRcvConn = 10
 
 // Config melody configuration struct.
 type Config struct {

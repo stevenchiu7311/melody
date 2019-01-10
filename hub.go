@@ -253,7 +253,11 @@ func (h *hub) readRedisConn(index int) {
 			}
 		case error:
 			log.Println("error pub/sub on connection, delivery has stopped, err[", v, "]")
-			persistRecv := <-h.persistRecv[index]
+			var persistRecv = true
+			select {
+			case persistRecv = <-h.persistRecv[index]:
+			case <-time.After(time.Duration(RedisRcvRetryInterval) * time.Second):
+			}
 			if persistRecv {
 				redisURI := core.ConfString("REDIS_URI")
 				redisConn, err := gRedisConn(redisURI)
@@ -261,7 +265,7 @@ func (h *hub) readRedisConn(index int) {
 				if err == nil {
 					log.Println("Re-connect redis")
 				} else {
-					panic(err)
+					continue
 				}
 
 				h.regMutex.Lock()

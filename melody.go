@@ -257,15 +257,8 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 }
 
 // Broadcast broadcasts a text message to all sessions.
-func (m *Melody) Broadcast(msg []byte) error {
-	if m.hub.closed() {
-		return errors.New("melody instance is closed")
-	}
-
-	message := &envelope{T: websocket.TextMessage, Msg: msg}
-	m.hub.broadcast[0] <- message
-
-	return nil
+func (m *Melody) Broadcast(msg []byte, channel interface{}, messageType int) error {
+	return m.BroadcastOthers(nil, msg, channel, messageType)
 }
 
 // BroadcastFilter broadcasts a text message to all sessions that fn returns true for.
@@ -325,10 +318,26 @@ func (m *Melody) BroadcastOthersRemote(s *Session, msg []byte, channel interface
 }
 
 // BroadcastOthers broadcasts a text message to all sessions except session s.
-func (m *Melody) BroadcastOthers(msg []byte, s *Session) error {
-	return m.BroadcastFilter(msg, func(q *Session) bool {
-		return s != q
-	})
+func (m *Melody) BroadcastOthers(s *Session, msg []byte, channel interface{}, messageType int) error {
+	if m.hub.closed() {
+		return errors.New("melody instance is closed")
+	}
+
+	message := &envelope{T: messageType, Msg: msg, To: channel, From: uintptr(unsafe.Pointer(s))}
+	m.hub.regMutex.RLock()
+	bucketIdxs := make([]int, 0)
+	for i, maps := range m.hub.routeMaps {
+		_, ok := maps[channel]
+		if ok {
+			bucketIdxs = append(bucketIdxs, i)
+		}
+	}
+	m.hub.regMutex.RUnlock()
+	for _, bucketIdx := range bucketIdxs {
+		m.hub.broadcast[bucketIdx] <- message
+	}
+
+	return nil
 }
 
 // BroadcastMultiple broadcasts a text message to multiple sessions given in the sessions slice.

@@ -37,7 +37,7 @@ type hub struct {
 	redisConn      redis.Conn
 	pubRedisConn   redis.Conn
 	pubSubConn     []*redis.PubSubConn
-	regMutex       *sync.Mutex
+	regMutex       *sync.RWMutex
 	allocConnMutex *sync.Mutex
 	routeMaps      []map[interface{}]map[*Session]*Session
 }
@@ -115,7 +115,7 @@ func newHub() *hub {
 		rwmutex:     &sync.RWMutex{},
 		redisPool:   redisPool,
 		pubSubConn:  pubSubConn,
-		regMutex:    &sync.Mutex{},
+		regMutex:    &sync.RWMutex{},
 		routeMaps:   routeMaps,
 	}
 }

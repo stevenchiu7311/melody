@@ -14,6 +14,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var (
+	testChannel = "test"
+)
+
 type TestServer struct {
 	m *Melody
 }
@@ -265,7 +269,7 @@ func TestMetadata(t *testing.T) {
 
 		diff := int(time.Now().UnixNano()) - stamp
 
-		if diff <= 0 {
+		if diff < 0 {
 			t.Errorf("diff should be above 0 %d", diff)
 			return false
 		}
@@ -307,8 +311,11 @@ func TestUpgrader(t *testing.T) {
 
 func TestBroadcast(t *testing.T) {
 	broadcast := NewTestServer()
+	broadcast.m.HandleConnect(func(session *Session) {
+		session.Register(map[string]interface{}{testChannel: testChannel})
+	})
 	broadcast.m.HandleMessage(func(session *Session, msg []byte) {
-		broadcast.m.Broadcast(msg)
+		broadcast.m.Broadcast(msg, testChannel, websocket.TextMessage)
 	})
 	server := httptest.NewServer(broadcast)
 	defer server.Close()
@@ -327,10 +334,8 @@ func TestBroadcast(t *testing.T) {
 		}
 
 		conn.WriteMessage(websocket.TextMessage, []byte(msg))
-
 		for i := 0; i < n; i++ {
 			_, ret, err := listeners[i].ReadMessage()
-
 			if err != nil {
 				t.Error(err)
 				return false
@@ -341,7 +346,6 @@ func TestBroadcast(t *testing.T) {
 				return false
 			}
 		}
-
 		return true
 	}
 
@@ -352,8 +356,11 @@ func TestBroadcast(t *testing.T) {
 
 func TestBroadcastBinary(t *testing.T) {
 	broadcast := NewTestServer()
+	broadcast.m.HandleConnect(func(session *Session) {
+		session.Register(map[string]interface{}{testChannel: testChannel})
+	})
 	broadcast.m.HandleMessageBinary(func(session *Session, msg []byte) {
-		broadcast.m.BroadcastBinary(msg)
+		broadcast.m.Broadcast(msg, testChannel, websocket.BinaryMessage)
 	})
 	server := httptest.NewServer(broadcast)
 	defer server.Close()
@@ -402,8 +409,11 @@ func TestBroadcastBinary(t *testing.T) {
 
 func TestBroadcastOthers(t *testing.T) {
 	broadcast := NewTestServer()
+	broadcast.m.HandleConnect(func(session *Session) {
+		session.Register(map[string]interface{}{testChannel: testChannel})
+	})
 	broadcast.m.HandleMessage(func(session *Session, msg []byte) {
-		broadcast.m.BroadcastOthers(msg, session)
+		broadcast.m.BroadcastOthers(session, msg, testChannel, websocket.TextMessage)
 	})
 	broadcast.m.Config.PongWait = time.Second
 	broadcast.m.Config.PingPeriod = time.Second * 9 / 10
@@ -449,8 +459,11 @@ func TestBroadcastOthers(t *testing.T) {
 
 func TestBroadcastBinaryOthers(t *testing.T) {
 	broadcast := NewTestServer()
+	broadcast.m.HandleConnect(func(session *Session) {
+		session.Register(map[string]interface{}{testChannel: testChannel})
+	})
 	broadcast.m.HandleMessageBinary(func(session *Session, msg []byte) {
-		broadcast.m.BroadcastBinaryOthers(msg, session)
+		broadcast.m.BroadcastOthers(session, msg, testChannel, websocket.BinaryMessage)
 	})
 	broadcast.m.Config.PongWait = time.Second
 	broadcast.m.Config.PingPeriod = time.Second * 9 / 10
@@ -501,6 +514,7 @@ func TestBroadcastBinaryOthers(t *testing.T) {
 
 func TestPingPong(t *testing.T) {
 	noecho := NewTestServer()
+	noecho.m.KeepAlive = KeepAlivePong
 	noecho.m.Config.PongWait = time.Second
 	noecho.m.Config.PingPeriod = time.Second * 9 / 10
 	server := httptest.NewServer(noecho)
@@ -522,93 +536,6 @@ func TestPingPong(t *testing.T) {
 
 	if err == nil {
 		t.Error("there should be an error")
-	}
-}
-
-func TestBroadcastFilter(t *testing.T) {
-	broadcast := NewTestServer()
-	broadcast.m.HandleMessage(func(session *Session, msg []byte) {
-		broadcast.m.BroadcastFilter(msg, func(q *Session) bool {
-			return session == q
-		})
-	})
-	server := httptest.NewServer(broadcast)
-	defer server.Close()
-
-	fn := func(msg string) bool {
-		conn, err := NewDialer(server.URL)
-		defer conn.Close()
-
-		if err != nil {
-			t.Error(err)
-			return false
-		}
-
-		conn.WriteMessage(websocket.TextMessage, []byte(msg))
-
-		_, ret, err := conn.ReadMessage()
-
-		if err != nil {
-			t.Error(err)
-			return false
-		}
-
-		if msg != string(ret) {
-			t.Errorf("%s should equal %s", msg, string(ret))
-			return false
-		}
-
-		return true
-	}
-
-	if !fn("test") {
-		t.Errorf("should not be false")
-	}
-}
-
-func TestBroadcastBinaryFilter(t *testing.T) {
-	broadcast := NewTestServer()
-	broadcast.m.HandleMessageBinary(func(session *Session, msg []byte) {
-		broadcast.m.BroadcastBinaryFilter(msg, func(q *Session) bool {
-			return session == q
-		})
-	})
-	server := httptest.NewServer(broadcast)
-	defer server.Close()
-
-	fn := func(msg []byte) bool {
-		conn, err := NewDialer(server.URL)
-		defer conn.Close()
-
-		if err != nil {
-			t.Error(err)
-			return false
-		}
-
-		conn.WriteMessage(websocket.BinaryMessage, []byte(msg))
-
-		messageType, ret, err := conn.ReadMessage()
-
-		if err != nil {
-			t.Error(err)
-			return false
-		}
-
-		if messageType != websocket.BinaryMessage {
-			t.Errorf("message type should be BinaryMessage")
-			return false
-		}
-
-		if !bytes.Equal(msg, ret) {
-			t.Errorf("%v should equal %v", msg, ret)
-			return false
-		}
-
-		return true
-	}
-
-	if !fn([]byte{2, 3, 5, 7, 11}) {
-		t.Errorf("should not be false")
 	}
 }
 
@@ -654,6 +581,7 @@ func TestPong(t *testing.T) {
 	echo := NewTestServerHandler(func(session *Session, msg []byte) {
 		session.Write(msg)
 	})
+	echo.m.KeepAlive = KeepAlivePing
 	echo.m.Config.PongWait = time.Second
 	echo.m.Config.PingPeriod = time.Second * 9 / 10
 	server := httptest.NewServer(echo)
@@ -712,7 +640,7 @@ func BenchmarkBroadcast(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
-		echo.m.Broadcast([]byte("test"))
+		echo.m.Broadcast([]byte("test"), testChannel, websocket.BinaryMessage)
 
 		for i := 0; i < num; i++ {
 			conns[i].ReadMessage()

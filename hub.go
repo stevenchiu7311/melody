@@ -7,7 +7,6 @@ import (
 	"time"
 	"unsafe"
 
-	"cmcm.com/cmgs/app/core"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -43,7 +42,7 @@ type hub struct {
 }
 
 func newRedisPool() *redis.Pool {
-	statRedis := newStatsRedis()
+	statRedis := newStatsRedis(RedisURL)
 	numRedisConn := statRedis.MaxActive
 	if DebugRedisPoolConn != 0 {
 		numRedisConn = DebugRedisPoolConn
@@ -53,7 +52,7 @@ func newRedisPool() *redis.Pool {
 		MaxIdle:   statRedis.MaxIdle,
 		MaxActive: numRedisConn,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", core.ConfString("REDIS_URI"),
+			c, err := redis.Dial("tcp", statRedis.URL,
 				redis.DialConnectTimeout(time.Duration(statRedis.ConnectTimeout)),
 				redis.DialReadTimeout(time.Duration(statRedis.ReadTimeout)),
 				redis.DialWriteTimeout(time.Duration(statRedis.WriteTimeout)))
@@ -80,7 +79,7 @@ func newRedisPool() *redis.Pool {
 }
 func newHub() *hub {
 	redisPool := newRedisPool()
-	redisURI := core.ConfString("REDIS_URI")
+	redisURI := RedisURL
 	log.Printf("Connect to redis server:[%s]\n", redisURI)
 	log.Println("Configured max recv redis conn:", RedisRcvConn)
 	routeMaps := make([]map[interface{}]map[*Session]*Session, RedisRcvConn)
@@ -259,7 +258,7 @@ func (h *hub) readRedisConn(index int) {
 			case <-time.After(time.Duration(RedisRcvRetryInterval) * time.Second):
 			}
 			if persistRecv {
-				redisURI := core.ConfString("REDIS_URI")
+				redisURI := RedisURL
 				redisConn, err := gRedisConn(redisURI)
 				h.pubSubConn[index] = &redis.PubSubConn{Conn: redisConn}
 				if err == nil {

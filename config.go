@@ -14,6 +14,9 @@ var RedisRcvConn = 10
 // RedisRcvRetryInterval -
 var RedisRcvRetryInterval int = 1
 
+// RedisURL -
+var RedisURL = "127.0.0.1:6379"
+
 // Config melody configuration struct.
 type Config struct {
 	WriteWait         time.Duration // Milliseconds until write times out.
@@ -35,6 +38,7 @@ func newConfig() *Config {
 
 // StatsRedis -
 type StatsRedis struct {
+	URL            string
 	MaxIdle        int
 	MaxActive      int
 	ConnectTimeout time.Duration
@@ -42,8 +46,9 @@ type StatsRedis struct {
 	WriteTimeout   time.Duration
 }
 
-func newStatsRedis() *StatsRedis {
+func newStatsRedis(url string) *StatsRedis {
 	return &StatsRedis{
+		URL:            url,
 		MaxIdle:        5,
 		MaxActive:      20,
 		ConnectTimeout: 10 * time.Second,

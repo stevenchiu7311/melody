@@ -9,7 +9,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"cmcm.com/cmgs/app/core"
 	"github.com/gorilla/websocket"
 )
 
@@ -299,7 +298,7 @@ func (m *Melody) BroadcastOthersRemote(s *Session, msg []byte, channel interface
 		} else {
 			m.pubMutex.Lock()
 			if m.hub.pubRedisConn == nil {
-				redisURI := core.ConfString("REDIS_URI")
+				redisURI := RedisURL
 				if c, err := gRedisConn(redisURI); err != nil {
 					log.Printf("error on redis conn. %s\n", err)
 				} else {

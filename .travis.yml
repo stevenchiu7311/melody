@@ -10,6 +10,7 @@ script:
   - go get -u github.com/jstemmer/go-junit-report
   - go test -v | go-junit-report > reports/testcase.xml
   - go test -coverprofile=cover.out && go tool cover -html=cover.out -o reports/coverage.html
+  - echo $API_KEY_SECURE
 before_script:
   - docker-compose -f ci/docker-compose.yml up -d
 services:

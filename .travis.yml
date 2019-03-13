@@ -23,3 +23,7 @@ deploy:
   skip_cleanup: true
   on:
     repo: stevenchiu7311/melody
+    branches:
+      only:
+        - master
+        - ci_test

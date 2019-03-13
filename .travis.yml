@@ -7,9 +7,12 @@ install:
   - go get github.com/gomodule/redigo/redis
 script:
   - mkdir reports
+  - ls reports
   - go get -u github.com/jstemmer/go-junit-report
-  - go test -v ${PKG_LIST} 2>&1 | go-junit-report > reports/testcase.xml
+  - go test -v | go-junit-report > reports/testcase.xml
+  - cat reports/testcase.xml
   - go test -coverprofile=cover.out && go tool cover -html=cover.out -o reports/coverage.html
+  - cat reports/coverage.html
 before_script:
   - docker-compose -f ci/docker-compose.yml up -d
 services:

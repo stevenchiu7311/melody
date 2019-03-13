@@ -23,4 +23,5 @@ deploy:
   file: 'reports/*'
   skip_cleanup: true
   on:
+    repo: stevenchiu7311/melody
     all_branches: true

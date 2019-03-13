@@ -19,7 +19,7 @@ deploy:
   api_key:
     secure: ET1YBzj+oCDch5XQYgvjvPDpFOcqxR2mJ7zpdGwXtkIpm93fRRCheoLJHcx2ndhsMiJE/eL5fxqFdncwQL576xTkHfjWOxUPWCGA+w6vy5ASY1RMFgu1BAkeLXxSiSa4Ioi2t/xZ8mUMHuTD5kPP4LHUyg135XIHYOtZiHMFcBor8oEMpWCi6krd05gA0SzTLKC6QV+7KDtL96LsZYzWwS7s8QiUKP+pw8s6vq8paDcagmGMbRn2KUNFl6tGxoAVSx6oJbGeLDo+7ieC+cm+9AO+uCVyUbFowTYA+G9BSy9aQTtem7BJsOQHK46JHG3V7yZDqtmVUs4fDhKp0xY0oQ5foOeEIWCiLMbjfto00x992U4Co5KSSWaftUXZxmiF3nugvMItXxEuRB64wCrQgLXT43oqUg06r92sWhUY4nIcuzxhUBKObH87qyaxAHu+WIi2Ed5FXV0G1iSPsGhT/JIeKjG5j036oQbHkdgUHNCR4YJfGYh0j9jg6AqeIlnUOZ6NXBRmpaGcJZCpyEqlUG2W+gQXx6KHAa9YRVywEXeoC+DGVhlM8hORARqDUhEyHzaaxvQMkyCLNZtL6ak7AVN5caLw2YgdAOyjr6sxHX2Mat7CxAVPtuHdK7L5d8hEXczJrrqZ2tEXSnD00k2ImSCHbkfLi3nW8fZjfAHDHY0=
   file_glob: true
-  file: 'report/*'
+  file: 'reports/*'
   skip_cleanup: true
   on:
     repo: stevenchiu7311/melody

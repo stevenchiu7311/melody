@@ -18,7 +18,7 @@ services:
 deploy:
   provider: releases
   api_key:
-    secure: $API_KEY_SECURE
+    secure: eqGDUYZTSmv9UFiAZfTtwRh/SDUBd6iL4HwIuwzpeo47bMfWQBDgVcrfCppi8sizhLqs+UhdZL+iQ4yHbkN89vxZWnfiDIKL3YhwzzHqbZza+ThD6FAhFpq8f4t/uVB1Xq0tjcMJtGrg2/1VJ17DCvstRKJMkmO7ixK4VoqW3lDWlhUZn+QaNK4P0hW0RcpAuUeGmlwLGwzytrp7wAUQ4hxTpRBd9cuf7Cr84i968j5TErqxaFCeB0WWkKHExnzozmgI2jQUNqg15vgqiUm/dJnITC36kgGyjyFY70bbATDfp8Ls208AF93Wfqkp368kBh6ahFb4pCNZSl4lYX715gOVnkPS11Sm8xpIdtz3jHNxCGanfwYFaTUIibsFj/+pZqnfmhWKTzQvkAXlMqKAafZisLGN03W9NxSyAZWunQnT23MR0IvX/C8sK+leWjMec/qtkk7HlWtONHGiGV9KW/ybBnX4fsjyHcaVeTdPGsr2aoehdgdRuLZB72SnG4CE8DCuHbJ331i8aZOVIoEOF9lD+5NIPmiZbcp7+/X4a8z3NosdOBNWCRI6gQVKo4SjDWnB/RdyLiJM9g0SAcsh9qlEfwaWosXT/kO5riQuuuGLLJMmQXktWqnj2PH03dS/XXK1+P/lSW2B0+uqNpPhPR7VZhAWtW+JOVlpkYUjbD4=
   file_glob: true
   file: 'reports/*'
   skip_cleanup: true

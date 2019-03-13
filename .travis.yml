@@ -11,15 +11,23 @@ script:
   - go test -v | go-junit-report > reports/testcase.xml
   - go test -coverprofile=cover.out && go tool cover -html=cover.out -o reports/coverage.html
 before_script:
-  - docker-compose -f ci/docker-compose.yml up -d
+  - docker-compose -f devops/docker-compose.yml up -d
 services:
   - docker
 deploy:
-  provider: releases
-  api_key:
-    secure: ET1YBzj+oCDch5XQYgvjvPDpFOcqxR2mJ7zpdGwXtkIpm93fRRCheoLJHcx2ndhsMiJE/eL5fxqFdncwQL576xTkHfjWOxUPWCGA+w6vy5ASY1RMFgu1BAkeLXxSiSa4Ioi2t/xZ8mUMHuTD5kPP4LHUyg135XIHYOtZiHMFcBor8oEMpWCi6krd05gA0SzTLKC6QV+7KDtL96LsZYzWwS7s8QiUKP+pw8s6vq8paDcagmGMbRn2KUNFl6tGxoAVSx6oJbGeLDo+7ieC+cm+9AO+uCVyUbFowTYA+G9BSy9aQTtem7BJsOQHK46JHG3V7yZDqtmVUs4fDhKp0xY0oQ5foOeEIWCiLMbjfto00x992U4Co5KSSWaftUXZxmiF3nugvMItXxEuRB64wCrQgLXT43oqUg06r92sWhUY4nIcuzxhUBKObH87qyaxAHu+WIi2Ed5FXV0G1iSPsGhT/JIeKjG5j036oQbHkdgUHNCR4YJfGYh0j9jg6AqeIlnUOZ6NXBRmpaGcJZCpyEqlUG2W+gQXx6KHAa9YRVywEXeoC+DGVhlM8hORARqDUhEyHzaaxvQMkyCLNZtL6ak7AVN5caLw2YgdAOyjr6sxHX2Mat7CxAVPtuHdK7L5d8hEXczJrrqZ2tEXSnD00k2ImSCHbkfLi3nW8fZjfAHDHY0=
-  file_glob: true
-  file: 'reports/*'
-  skip_cleanup: true
-  on:
-    repo: stevenchiu7311/melody
+  - provider: releases
+    api_key:
+      secure: KcVFyJdx20Qp7ZIFbdBjkPTl3Lg6q6TP6C3MDEDME01SweWGNZKckK4OfVOgctLNCZmZqJVxoRErzTrzAQiqpMuL1eKvN1g+QsWwukaR6U0dM52UwHv6vBmCbtTxVfPP3b5bPlDVSCJwYE75A0yR21oa2HXggp7yjkCa1wah8UOmjsZnESWBvs/6KmdPtTJyybv0FccGRdQ28+NYrT99QiDzMD6NYFJpdpKiQDF8eTzIgQU+UpL3uz0MZvvqwOniEhbRLYZc2b6uvEKttuFFGEPMpjwTJcVqU9KxchivtzQU/jgIeUqdiqhwiPNPqVu7W/syr/h+2c5Mt3ao5tbK+0NARSBijYh3AxUztQa9pQ3YQwmlJUDm3sabJenbQ3PMnjllRSn0HaqkAEZ8rY0tGX5Vc0BC8uw2Kyy4dBMc0P8+E7GHHXisL+Gq1I9o+lBAbTwb0I70ogJXvsyvh7+635ejgqtiG6GLP9ntx/8FPRZXBXVsaiEaY0KeTS4NzfpdpTvphSPHxdcN+lJNnmb5REvC3h26NJSvfYQbZIcfRuuWUXd9UGEGhwvBUkPIjQlBx/PKSo+KwCGf+8bjcAAJKHaVHQH8BvyIAC3QPRvMNnDvsV0QNvAEtq+5CVWbQlZ92AHoAL+bSQmLPQnHc4hn0o8OayDLgP0unB9eKlJLYck=
+    file_glob: true
+    file: 'reports/*'
+    skip_cleanup: true
+    on:
+      repo: stevenchiu7311/melody
+  - provider: pages
+    local-dir: 'reports'
+    skip-cleanup: true
+    github-token:
+      secure: KcVFyJdx20Qp7ZIFbdBjkPTl3Lg6q6TP6C3MDEDME01SweWGNZKckK4OfVOgctLNCZmZqJVxoRErzTrzAQiqpMuL1eKvN1g+QsWwukaR6U0dM52UwHv6vBmCbtTxVfPP3b5bPlDVSCJwYE75A0yR21oa2HXggp7yjkCa1wah8UOmjsZnESWBvs/6KmdPtTJyybv0FccGRdQ28+NYrT99QiDzMD6NYFJpdpKiQDF8eTzIgQU+UpL3uz0MZvvqwOniEhbRLYZc2b6uvEKttuFFGEPMpjwTJcVqU9KxchivtzQU/jgIeUqdiqhwiPNPqVu7W/syr/h+2c5Mt3ao5tbK+0NARSBijYh3AxUztQa9pQ3YQwmlJUDm3sabJenbQ3PMnjllRSn0HaqkAEZ8rY0tGX5Vc0BC8uw2Kyy4dBMc0P8+E7GHHXisL+Gq1I9o+lBAbTwb0I70ogJXvsyvh7+635ejgqtiG6GLP9ntx/8FPRZXBXVsaiEaY0KeTS4NzfpdpTvphSPHxdcN+lJNnmb5REvC3h26NJSvfYQbZIcfRuuWUXd9UGEGhwvBUkPIjQlBx/PKSo+KwCGf+8bjcAAJKHaVHQH8BvyIAC3QPRvMNnDvsV0QNvAEtq+5CVWbQlZ92AHoAL+bSQmLPQnHc4hn0o8OayDLgP0unB9eKlJLYck=
+    keep-history: true
+    on:
+      repo: stevenchiu7311/melody

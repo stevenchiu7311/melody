@@ -2,6 +2,7 @@ package melody
 
 import (
 	"bytes"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -48,6 +49,7 @@ func NewDialer(url string) (*websocket.Conn, error) {
 }
 
 func TestEcho(t *testing.T) {
+	log.Println("TestEcho")
 	echo := NewTestServerHandler(func(session *Session, msg []byte) {
 		session.Write(msg)
 	})
@@ -86,6 +88,7 @@ func TestEcho(t *testing.T) {
 }
 
 func TestWriteClosed(t *testing.T) {
+	log.Println("TestWriteClosed")
 	echo := NewTestServerHandler(func(session *Session, msg []byte) {
 		session.Write(msg)
 	})
@@ -123,6 +126,7 @@ func TestWriteClosed(t *testing.T) {
 }
 
 func TestLen(t *testing.T) {
+	log.Println("TestLen")
 	rand.Seed(time.Now().UnixNano())
 
 	connect := int(rand.Int31n(100))
@@ -168,6 +172,7 @@ func TestLen(t *testing.T) {
 }
 
 func TestEchoBinary(t *testing.T) {
+	log.Println("TestEchoBinary")
 	echo := NewTestServer()
 	echo.m.HandleMessageBinary(func(session *Session, msg []byte) {
 		session.WriteBinary(msg)
@@ -207,6 +212,7 @@ func TestEchoBinary(t *testing.T) {
 }
 
 func TestHandlers(t *testing.T) {
+	log.Println("TestHandlers")
 	echo := NewTestServer()
 	echo.m.HandleMessage(func(session *Session, msg []byte) {
 		session.Write(msg)
@@ -231,6 +237,7 @@ func TestHandlers(t *testing.T) {
 }
 
 func TestMetadata(t *testing.T) {
+	log.Println("TestMetadata")
 	echo := NewTestServer()
 	echo.m.HandleConnect(func(session *Session) {
 		session.Set("stamp", time.Now().UnixNano())
@@ -283,6 +290,7 @@ func TestMetadata(t *testing.T) {
 }
 
 func TestUpgrader(t *testing.T) {
+	log.Println("TestUpgrader")
 	broadcast := NewTestServer()
 	broadcast.m.HandleMessage(func(session *Session, msg []byte) {
 		session.Write(msg)
@@ -310,6 +318,7 @@ func TestUpgrader(t *testing.T) {
 }
 
 func TestBroadcast(t *testing.T) {
+	log.Println("TestBroadcast")
 	broadcast := NewTestServer()
 	broadcast.m.HandleConnect(func(session *Session) {
 		session.Register(map[string]interface{}{testChannel: testChannel})
@@ -355,6 +364,7 @@ func TestBroadcast(t *testing.T) {
 }
 
 func TestBroadcastBinary(t *testing.T) {
+	log.Println("TestBroadcastBinary")
 	broadcast := NewTestServer()
 	broadcast.m.HandleConnect(func(session *Session) {
 		session.Register(map[string]interface{}{testChannel: testChannel})
@@ -408,6 +418,7 @@ func TestBroadcastBinary(t *testing.T) {
 }
 
 func TestBroadcastOthers(t *testing.T) {
+	log.Println("TestBroadcastOthers")
 	broadcast := NewTestServer()
 	broadcast.m.HandleConnect(func(session *Session) {
 		session.Register(map[string]interface{}{testChannel: testChannel})
@@ -458,6 +469,7 @@ func TestBroadcastOthers(t *testing.T) {
 }
 
 func TestBroadcastBinaryOthers(t *testing.T) {
+	log.Println("TestBroadcastBinaryOthers")
 	broadcast := NewTestServer()
 	broadcast.m.HandleConnect(func(session *Session) {
 		session.Register(map[string]interface{}{testChannel: testChannel})
@@ -513,6 +525,7 @@ func TestBroadcastBinaryOthers(t *testing.T) {
 }
 
 func TestPingPong(t *testing.T) {
+	log.Println("TestPingPong")
 	noecho := NewTestServer()
 	noecho.m.KeepAlive = KeepAlivePong
 	noecho.m.Config.PongWait = time.Second
@@ -540,6 +553,7 @@ func TestPingPong(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
+	log.Println("TestStop")
 	noecho := NewTestServer()
 	server := httptest.NewServer(noecho)
 	defer server.Close()
@@ -555,6 +569,7 @@ func TestStop(t *testing.T) {
 }
 
 func TestSmallMessageBuffer(t *testing.T) {
+	log.Println("TestSmallMessageBuffer")
 	echo := NewTestServerHandler(func(session *Session, msg []byte) {
 		session.Write(msg)
 	})
@@ -578,6 +593,7 @@ func TestSmallMessageBuffer(t *testing.T) {
 }
 
 func TestPong(t *testing.T) {
+	log.Println("TestPong")
 	echo := NewTestServerHandler(func(session *Session, msg []byte) {
 		session.Write(msg)
 	})
@@ -609,6 +625,7 @@ func TestPong(t *testing.T) {
 }
 
 func BenchmarkSessionWrite(b *testing.B) {
+	log.Println("BenchmarkSessionWrite")
 	echo := NewTestServerHandler(func(session *Session, msg []byte) {
 		session.Write(msg)
 	})
@@ -624,6 +641,7 @@ func BenchmarkSessionWrite(b *testing.B) {
 }
 
 func BenchmarkBroadcast(b *testing.B) {
+	log.Println("BenchmarkBroadcast")
 	echo := NewTestServerHandler(func(session *Session, msg []byte) {
 		session.Write(msg)
 	})

@@ -60,7 +60,7 @@
 				
 				<option value="file2">github.com/stevenchiu7311/melody/melody.go (41.6%)</option>
 				
-				<option value="file3">github.com/stevenchiu7311/melody/session.go (69.7%)</option>
+				<option value="file3">github.com/stevenchiu7311/melody/session.go (67.4%)</option>
 				
 				<option value="file4">github.com/stevenchiu7311/melody/util.go (66.7%)</option>
 				
@@ -869,7 +869,7 @@ type Session struct {
 }
 
 func (s *Session) writeMessage(message *envelope) <span class="cov8" title="1">{
-        if s.closed() </span><span class="cov8" title="1">{
+        if s.closed() </span><span class="cov0" title="0">{
                 s.melody.errorHandler(s, errors.New("tried to write to closed a session"))
                 return
         }</span>
@@ -1034,7 +1034,7 @@ func (s *Session) WriteBinary(msg []byte) error <span class="cov8" title="1">{
 
 // Close closes session.
 func (s *Session) Close() error <span class="cov8" title="1">{
-        if s.closed() </span><span class="cov8" title="1">{
+        if s.closed() </span><span class="cov0" title="0">{
                 return errors.New("session is already closed")
         }</span>
 

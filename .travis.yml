@@ -28,7 +28,6 @@ deploy:
     local-dir: 'reports'
     skip-cleanup: true
     github-token:
-    api_key:
       secure: KcVFyJdx20Qp7ZIFbdBjkPTl3Lg6q6TP6C3MDEDME01SweWGNZKckK4OfVOgctLNCZmZqJVxoRErzTrzAQiqpMuL1eKvN1g+QsWwukaR6U0dM52UwHv6vBmCbtTxVfPP3b5bPlDVSCJwYE75A0yR21oa2HXggp7yjkCa1wah8UOmjsZnESWBvs/6KmdPtTJyybv0FccGRdQ28+NYrT99QiDzMD6NYFJpdpKiQDF8eTzIgQU+UpL3uz0MZvvqwOniEhbRLYZc2b6uvEKttuFFGEPMpjwTJcVqU9KxchivtzQU/jgIeUqdiqhwiPNPqVu7W/syr/h+2c5Mt3ao5tbK+0NARSBijYh3AxUztQa9pQ3YQwmlJUDm3sabJenbQ3PMnjllRSn0HaqkAEZ8rY0tGX5Vc0BC8uw2Kyy4dBMc0P8+E7GHHXisL+Gq1I9o+lBAbTwb0I70ogJXvsyvh7+635ejgqtiG6GLP9ntx/8FPRZXBXVsaiEaY0KeTS4NzfpdpTvphSPHxdcN+lJNnmb5REvC3h26NJSvfYQbZIcfRuuWUXd9UGEGhwvBUkPIjQlBx/PKSo+KwCGf+8bjcAAJKHaVHQH8BvyIAC3QPRvMNnDvsV0QNvAEtq+5CVWbQlZ92AHoAL+bSQmLPQnHc4hn0o8OayDLgP0unB9eKlJLYck=
     keep-history: true
     on:

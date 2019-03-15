@@ -23,7 +23,6 @@ deploy:
     skip_cleanup: true
     on:
       repo: stevenchiu7311/melody
-      all_branches: true
   - provider: pages
     local-dir: 'reports'
     skip-cleanup: true
@@ -32,4 +31,3 @@ deploy:
     keep-history: true
     on:
       repo: stevenchiu7311/melody
-      all_branches: true

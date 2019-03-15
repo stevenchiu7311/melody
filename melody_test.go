@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"testing/quick"
 	"time"
@@ -92,6 +93,17 @@ func TestWriteClosed(t *testing.T) {
 	echo := NewTestServerHandler(func(session *Session, msg []byte) {
 		session.Write(msg)
 	})
+	echo.m.HandleConnect(func(s *Session) {
+		s.Close()
+	})
+
+	echo.m.HandleDisconnect(func(s *Session) {
+		err := s.Write([]byte("hello world"))
+
+		if err == nil {
+			t.Error("should be an error")
+		}
+	})
 	server := httptest.NewServer(echo)
 	defer server.Close()
 
@@ -104,18 +116,6 @@ func TestWriteClosed(t *testing.T) {
 		}
 
 		conn.WriteMessage(websocket.TextMessage, []byte(msg))
-
-		echo.m.HandleConnect(func(s *Session) {
-			s.Close()
-		})
-
-		echo.m.HandleDisconnect(func(s *Session) {
-			err := s.Write([]byte("hello world"))
-
-			if err == nil {
-				t.Error("should be an error")
-			}
-		})
 
 		return true
 	}
@@ -610,16 +610,17 @@ func TestPong(t *testing.T) {
 		t.Error(err)
 	}
 
-	fired := false
+	var fired int32
+	atomic.StoreInt32(&fired, 0)
 	echo.m.HandlePong(func(s *Session) {
-		fired = true
+		atomic.StoreInt32(&fired, 1)
 	})
 
 	conn.WriteMessage(websocket.PongMessage, nil)
 
 	time.Sleep(time.Millisecond)
 
-	if !fired {
+	if atomic.LoadInt32(&fired) == 0 {
 		t.Error("should have fired pong handler")
 	}
 }

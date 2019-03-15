@@ -11,7 +11,7 @@ script:
   - go test -v | go-junit-report > reports/testcase.xml
   - go test -coverprofile=cover.out && go tool cover -html=cover.out -o reports/coverage.html
 before_script:
-  - docker-compose -f ci/docker-compose.yml up -d
+  - docker-compose -f devops/docker-compose.yml up -d
 services:
   - docker
 deploy:

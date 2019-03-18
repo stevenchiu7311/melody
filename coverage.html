@@ -56,9 +56,9 @@
 				
 				<option value="file0">github.com/stevenchiu7311/melody/config.go (100.0%)</option>
 				
-				<option value="file1">github.com/stevenchiu7311/melody/hub.go (49.6%)</option>
+				<option value="file1">github.com/stevenchiu7311/melody/hub.go (48.5%)</option>
 				
-				<option value="file2">github.com/stevenchiu7311/melody/melody.go (41.6%)</option>
+				<option value="file2">github.com/stevenchiu7311/melody/melody.go (45.9%)</option>
 				
 				<option value="file3">github.com/stevenchiu7311/melody/session.go (67.4%)</option>
 				
@@ -309,7 +309,7 @@ loop:
                         }</span>
                 case m := &lt;-h.exit:<span class="cov8" title="1">
                         h.rwmutex.Lock()
-                        for s := range h.sessions </span><span class="cov8" title="1">{
+                        for s := range h.sessions </span><span class="cov0" title="0">{
                                 s.writeMessage(m)
                                 delete(h.sessions, s)
                                 s.Close()
@@ -335,6 +335,13 @@ func (h *hub) len() int <span class="cov8" title="1">{
         defer h.rwmutex.RUnlock()
 
         return len(h.sessions)
+}</span>
+
+func (h *hub) registered(session *Session) bool <span class="cov8" title="1">{
+        h.rwmutex.RLock()
+        defer h.rwmutex.RUnlock()
+
+        return h.sessions[session]
 }</span>
 
 func (h *hub) readRedisConn(index int) <span class="cov8" title="1">{
@@ -659,6 +666,21 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
         go session.writePump()
 
         session.readPump()
+
+        // Ensure session's registration in channel
+        var wg sync.WaitGroup
+
+        wg.Add(1)
+        go func() </span><span class="cov8" title="1">{
+                defer wg.Done()
+                for </span><span class="cov8" title="1">{
+                        registered := m.hub.registered(session)
+                        if registered </span><span class="cov8" title="1">{
+                                return
+                        }</span>
+                }
+        }()
+        <span class="cov8" title="1">wg.Wait()
 
         if !m.hub.closed() </span><span class="cov8" title="1">{
                 m.hub.unregister &lt;- session

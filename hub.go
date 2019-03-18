@@ -199,6 +199,13 @@ func (h *hub) len() int {
 	return len(h.sessions)
 }
 
+func (h *hub) registered(session *Session) bool {
+	h.rwmutex.RLock()
+	defer h.rwmutex.RUnlock()
+
+	return h.sessions[session]
+}
+
 func (h *hub) readRedisConn(index int) {
 	if bucketDebugDump {
 		go func() {

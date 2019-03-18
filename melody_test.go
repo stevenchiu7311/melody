@@ -161,14 +161,18 @@ func TestLen(t *testing.T) {
 
 		conns[i] = conn
 	}
+	block := make(chan int)
+	go func() {
+		time.Sleep(time.Millisecond)
 
-	time.Sleep(time.Millisecond)
+		connected := connect - disconnected
 
-	connected := connect - disconnected
-
-	if echo.m.Len() != connected {
-		t.Errorf("melody len %d should equal %d", echo.m.Len(), connected)
-	}
+		if echo.m.Len() != connected {
+			t.Errorf("melody len %d should equal %d", echo.m.Len(), connected)
+		}
+		block <- 0
+	}()
+	<-block
 }
 
 func TestEchoBinary(t *testing.T) {

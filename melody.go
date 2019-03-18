@@ -237,6 +237,21 @@ func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, k
 
 	session.readPump()
 
+	// Ensure session's registration in channel
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			registered := m.hub.registered(session)
+			if registered {
+				return
+			}
+		}
+	}()
+	wg.Wait()
+
 	if !m.hub.closed() {
 		m.hub.unregister <- session
 	}

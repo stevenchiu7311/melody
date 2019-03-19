@@ -58,7 +58,7 @@
 				
 				<option value="file1">github.com/stevenchiu7311/melody/hub.go (48.5%)</option>
 				
-				<option value="file2">github.com/stevenchiu7311/melody/melody.go (45.9%)</option>
+				<option value="file2">github.com/stevenchiu7311/melody/melody.go (46.3%)</option>
 				
 				<option value="file3">github.com/stevenchiu7311/melody/session.go (67.4%)</option>
 				
@@ -521,13 +521,14 @@ type Melody struct {
 type DebugInfo struct {
         UserCountMutex sync.Mutex
         UserCount      int
+        Tag            string
 }
 
 // EnableDebug -
 var EnableDebug = false
 
-// New creates a new melody instance with default Upgrader and Config.
-func New() *Melody <span class="cov8" title="1">{
+// NewWithTag creates a new melody instance with default Upgrader, Config and identity.
+func NewWithTag(tag string) *Melody <span class="cov8" title="1">{
         upgrader := &amp;websocket.Upgrader{
                 ReadBufferSize:  1024,
                 WriteBufferSize: 1024,
@@ -555,9 +556,14 @@ func New() *Melody <span class="cov8" title="1">{
                 pingHandler:              func(*Session) {<span class="cov0" title="0">}</span>,
                 pongHandler:              func(*Session) {<span class="cov0" title="0">}</span>,
                 hub:                      hub,
-                debugInfo:                DebugInfo{},
+                debugInfo:                DebugInfo{Tag: tag},
         }
 }
+
+// New creates a new melody instance with default Upgrader and Config.
+func New() *Melody <span class="cov8" title="1">{
+        return NewWithTag("")
+}</span>
 
 // HandleConnect fires fn when a session connects.
 func (m *Melody) HandleConnect(fn func(*Session)) <span class="cov8" title="1">{

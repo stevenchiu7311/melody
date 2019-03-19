@@ -1,23 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-	<testsuite tests="15" failures="0" time="1.191" name="github.com/stevenchiu7311/melody">
+	<testsuite tests="25" failures="0" time="6.276" name="github.com/stevenchiu7311/melody">
 		<properties>
 			<property name="go.version" value="go1.11"></property>
 		</properties>
 		<testcase classname="melody" name="TestEcho" time="0.030"></testcase>
-		<testcase classname="melody" name="TestWriteClosed" time="0.040"></testcase>
-		<testcase classname="melody" name="TestLen" time="0.020"></testcase>
-		<testcase classname="melody" name="TestEchoBinary" time="0.040"></testcase>
+		<testcase classname="melody" name="TestWriteClosed" time="0.050"></testcase>
+		<testcase classname="melody" name="TestLen" time="0.000"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen" time="1.020"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#01" time="1.010"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#02" time="1.010"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#03" time="1.010"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#04" time="1.010"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#05" time="1.020"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#06" time="1.010"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#07" time="1.030"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#08" time="1.020"></testcase>
+		<testcase classname="melody" name="TestLen/TestLen#09" time="1.020"></testcase>
+		<testcase classname="melody" name="TestEchoBinary" time="0.030"></testcase>
 		<testcase classname="melody" name="TestHandlers" time="0.000"></testcase>
 		<testcase classname="melody" name="TestMetadata" time="0.030"></testcase>
 		<testcase classname="melody" name="TestUpgrader" time="0.000"></testcase>
-		<testcase classname="melody" name="TestBroadcast" time="0.000"></testcase>
+		<testcase classname="melody" name="TestBroadcast" time="0.010"></testcase>
 		<testcase classname="melody" name="TestBroadcastBinary" time="0.000"></testcase>
 		<testcase classname="melody" name="TestBroadcastOthers" time="0.000"></testcase>
-		<testcase classname="melody" name="TestBroadcastBinaryOthers" time="0.000"></testcase>
+		<testcase classname="melody" name="TestBroadcastBinaryOthers" time="0.010"></testcase>
 		<testcase classname="melody" name="TestPingPong" time="1.000"></testcase>
 		<testcase classname="melody" name="TestStop" time="0.000"></testcase>
-		<testcase classname="melody" name="TestSmallMessageBuffer" time="0.000"></testcase>
+		<testcase classname="melody" name="TestSmallMessageBuffer" time="0.010"></testcase>
 		<testcase classname="melody" name="TestPong" time="0.000"></testcase>
 	</testsuite>
 </testsuites>

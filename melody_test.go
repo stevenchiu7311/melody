@@ -126,53 +126,62 @@ func TestWriteClosed(t *testing.T) {
 }
 
 func TestLen(t *testing.T) {
-	log.Println("TestLen")
-	rand.Seed(time.Now().UnixNano())
+	for count := 0; count < 10; count++ {
+		t.Run("TestLen", func(t *testing.T) {
+			t.Parallel()
+			rand.Seed(time.Now().UnixNano())
 
-	connect := int(rand.Int31n(100))
-	disconnect := rand.Float32()
-	conns := make([]*websocket.Conn, connect)
-	defer func() {
-		for _, conn := range conns {
-			if conn != nil {
-				conn.Close()
+			connect := int(rand.Int31n(100))
+			disconnect := rand.Float32()
+			conns := make([]*websocket.Conn, connect)
+
+			m := NewWithTag(t.Name())
+			echo := &TestServer{
+				m: m,
 			}
-		}
-	}()
 
-	echo := NewTestServerHandler(func(session *Session, msg []byte) {})
-	server := httptest.NewServer(echo)
-	defer server.Close()
+			server := httptest.NewServer(echo)
+			defer server.Close()
 
-	disconnected := 0
-	for i := 0; i < connect; i++ {
-		conn, err := NewDialer(server.URL)
+			disconnected := 0
+			for i := 0; i < connect; i++ {
+				conn, err := NewDialer(server.URL)
 
-		if err != nil {
-			t.Error(err)
-		}
+				if err != nil {
+					t.Error(err)
+				}
 
-		if rand.Float32() < disconnect {
-			conns[i] = nil
-			disconnected++
-			conn.Close()
-			continue
-		}
+				if rand.Float32() < disconnect {
+					conns[i] = nil
+					disconnected++
+					conn.Close()
+					continue
+				}
 
-		conns[i] = conn
+				conns[i] = conn
+			}
+			block := make(chan int)
+			go func() {
+				time.Sleep(1 * time.Second)
+
+				connected := connect - disconnected
+
+				if echo.m.Len() != connected {
+					t.Errorf("melody len %d should equal %d", echo.m.Len(), connected)
+				}
+				block <- 0
+			}()
+			<-block
+
+			func() {
+				for _, conn := range conns {
+					if conn != nil {
+						conn.Close()
+					}
+				}
+			}()
+		})
 	}
-	block := make(chan int)
-	go func() {
-		time.Sleep(time.Millisecond)
-
-		connected := connect - disconnected
-
-		if echo.m.Len() != connected {
-			t.Errorf("melody len %d should equal %d", echo.m.Len(), connected)
-		}
-		block <- 0
-	}()
-	<-block
 }
 
 func TestEchoBinary(t *testing.T) {

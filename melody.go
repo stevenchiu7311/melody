@@ -91,13 +91,14 @@ type Melody struct {
 type DebugInfo struct {
 	UserCountMutex sync.Mutex
 	UserCount      int
+	Tag            string
 }
 
 // EnableDebug -
 var EnableDebug = false
 
-// New creates a new melody instance with default Upgrader and Config.
-func New() *Melody {
+// NewWithTag creates a new melody instance with default Upgrader, Config and identity.
+func NewWithTag(tag string) *Melody {
 	upgrader := &websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -125,8 +126,13 @@ func New() *Melody {
 		pingHandler:              func(*Session) {},
 		pongHandler:              func(*Session) {},
 		hub:                      hub,
-		debugInfo:                DebugInfo{},
+		debugInfo:                DebugInfo{Tag: tag},
 	}
+}
+
+// New creates a new melody instance with default Upgrader and Config.
+func New() *Melody {
+	return NewWithTag("")
 }
 
 // HandleConnect fires fn when a session connects.
